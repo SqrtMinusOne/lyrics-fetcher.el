@@ -38,14 +38,14 @@
   :type '(string nil)
   :group 'lyrics-fetcher)
 
-(defun lyrics-fetcher-genius-do-search (query callback &optional sync)
+(defun lyrics-fetcher-genius-do-search (track callback &optional sync)
   "Perform a lyrics search on 'genius.com'.
 
-Requies ‘lyrics-fetcher-genius-access-token’ to be set.
+Requies `lyrics-fetcher-genius-access-token' to be set.
 
-QUERY should be a string which contains the requied information
-about the song, e.g. \"Queen The Show Must Go On\". If the search
-is successful, CALLBACK will be called with the resulting lyrics
+TRACK should be EMMS-compatible alist or string, take a look at
+`lyrics-fetcher--genius-format-query'.  If the search is
+successful, CALLBACK will be called with the resulting lyrics
 text.
 
 If SYNC is non-nil, perform request synchronously and ask the
@@ -54,7 +54,8 @@ user to pick the matching search result."
       (message "Genius client access token not set!")
     (message "Sending a query to genius API...")
     (request "https://api.genius.com/search"
-      :params `(("q" . ,query) ("access_token" . ,lyrics-fetcher-genius-access-token))
+      :params `(("q" . ,(lyrics-fetcher--genius-format-query track))
+                ("access_token" . ,lyrics-fetcher-genius-access-token))
       :parser 'json-read
       :sync sync
       :success (cl-function
@@ -66,6 +67,20 @@ user to pick the matching search result."
       :error (cl-function
               (lambda (&&key error-thrown &allow-other-keys)
                 (message "Error!: %S" error-thrown))))))
+
+(defun lyrics-fetcher--genius-format-query (track)
+  "Format track to genius.com query.
+
+TRACK should either be a string or an EMMS-compatible alist, which
+contains `info-albumartist' or `info-artist' and `info-title'"
+  (if (stringp track)
+      track
+    (concat
+     (or (cdr (assoc 'info-albumartist track))
+         (cdr (assoc 'info-artist track))
+         "")
+     " "
+     (cdr (assoc 'info-title track)))))
 
 (defun lyrics-fetcher--genius-format-song-title (entry)
   "Convert a Genius search ENTRY to a string, which can be used in selection."
