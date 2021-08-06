@@ -1,16 +1,55 @@
-;; -*- lexical-binding: t -*-
+;;; lyrics-fetcher-genius.el --- fetch lyrics from genius.com -*- lexical-binding: t -*-
 
+;; Copyright (C) 2021 Korytov Pavel
+
+;; Author: Korytov Pavel <thexcloud@gmail.com>
+;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
+;; Version: 0.1.0
+;; Package-Requires: ((emacs "27") (request "0.3.2"))
+;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; Fetch song lyrics from genius.com.
+
+;;; Code:
 (require 'request)
 (require 'json)
 (require 'seq)
 (require 'shr)
 
 (defcustom lyrics-fetcher-genius-access-token nil
-  "Genius access token. Get one at https://genius.com."
+  "Genius access token.  Get one at https://genius.com."
   :type '(string nil)
   :group 'lyrics-fetcher)
 
-(defun lyrics-fetcher--genius-do-search (query callback &optional sync)
+(defun lyrics-fetcher-genius-do-search (query callback &optional sync)
+  "Perform a lyrics search on 'genius.com'.
+
+Requies ‘lyrics-fetcher-genius-access-token’ to be set.
+
+QUERY should be a string which contains the requied information
+about the song, e.g. \"Queen The Show Must Go On\". If the search
+is successful, CALLBACK will be called with the resulting lyrics
+text.
+
+If SYNC is non-nil, perform request synchronously and ask the
+user to pick the matching search result."
   (if (string-empty-p lyrics-fetcher-genius-access-token)
       (message "Genius client access token not set!")
     (message "Sending a query to genius API...")
@@ -18,15 +57,28 @@
       :params `(("q" . ,query) ("access_token" . ,lyrics-fetcher-genius-access-token))
       :parser 'json-read
       :sync sync
-      :success callback)))
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (lyrics-fetcher--genius-fetch-lyrics
+                   (lyrics-fetcher--genius-get-url-from-response data sync)
+                   callback
+                   sync)))
+      :error (cl-function
+              (lambda (&&key error-thrown &allow-other-keys)
+                (message "Error!: %S" error-thrown))))))
 
-(defun lyrics-fetcher-genius--format-song-title (entry)
+(defun lyrics-fetcher--genius-format-song-title (entry)
+  "Convert a Genius search ENTRY to a string, which can be used in selection."
   (let ((result (assoc 'result entry)))
     (format "%-40s [lyrics: %s]"
             (cdr (assoc 'full_title result))
             (cdr (assoc 'lyrics_state result)))))
 
-(defun lyrics-fetcher--genius-get-url-from-response (data)
+(defun lyrics-fetcher--genius-get-url-from-response (data &optional ask)
+  "Retrive a song URL from the Genius response DATA.
+
+If ASK is non-nil, prompt user for a choice, otherwise select the
+first song."
   (if (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
       (message "Error: %" (cdr (assoc 'message (assoc 'meta data))))
     (let* ((results (cdr (assoc 'hits (assoc 'response data))))
@@ -37,11 +89,11 @@
       (if (seq-empty-p results-songs)
           (message "Error: no results!")
         (cdr
-         (if (= (prefix-numeric-value current-prefix-arg) 4)
+         (if ask
              (let ((results-songs-for-select
                     (mapcar
                      (lambda (entry)
-                       (cons (lyrics-fetcher-genius--format-song-title entry)
+                       (cons (lyrics-fetcher--genius-format-song-title entry)
                              (assoc 'url (assoc 'result entry))))
                      results-songs)))
                (cdr
@@ -54,6 +106,12 @@
            (assoc 'url (assoc 'result (car results-songs)))))))))
 
 (defun lyrics-fetcher--genius-fetch-lyrics (url callback &optional sync)
+  "Fetch lyrics from genius.com page at URL and call CALLBACK with result.
+
+If SYNC is non-nil, the request will be performed synchronously, but
+the function will still make Emacs lags, as HTML parsing is pretty
+expensive."
+  (message "Getting lyrics from %s" url)
   (request url
     :parser 'buffer-string
     :sync sync
@@ -69,25 +127,10 @@
                     (funcall callback
                              (buffer-substring-no-properties
                               (point-min)
-                              (point-max)))))))))
+                              (point-max)))))))
+    (cl-function
+     (lambda (&&key error-thrown &allow-other-keys)
+       (message "Error!: %S" error-thrown)))))
 
-(lyrics-fetcher--genius-do-search
- "Epica Rivers"
- (cl-function
-  (lambda (&key data &allow-other-keys)
-    (setq my/test data))))
-
-(defun my/foo ()
-  (defun my/bar () 1)
-  (my/bar))
-
-(add-to-list 'ivy-prescient-sort-commands
-             'lyrics-fetcher--genius-get-url-from-response t)
-
-(let ((current-prefix-arg '(4)))
-  (lyrics-fetcher--genius-get-url-from-response my/test))
-
-(lyrics-fetcher--genius-fetch-lyrics
- "https://genius.com/Nightwish-the-greatest-show-on-earth-lyrics"
- (lambda (res)
-   (setq my/res res)))
+(provide 'lyrics-fetcher-genius)
+;;; lyrics-fetcher-genius.el ends here
