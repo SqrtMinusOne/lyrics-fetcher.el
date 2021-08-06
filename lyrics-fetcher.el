@@ -124,11 +124,11 @@ The function has to take into account that:
               (substring artist 0 (min (length artist) 40))
               (substring title 0 (min (length title) 190))))))
 
-(defun lyrics-fetcher-show-lyrics (&optional track)
+(cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open callback force-fetch sync)
   "Show lyrics for TRACK.
 
 TRACK can be either a string or an EMMS alist.  If TRACK is not
-set, e.g. when called interactively, then
+set, for instance when called interactively, then
 `lyrics-fetcher-current-track-method' will be used to get the
 current playing track.
 
@@ -137,12 +137,18 @@ otherwise performs fetch according to
 `lyrics-fetcher-current-track-method'.  The resulting file will be
 saved with a name from `lyrics-fetcher-format-file-name-method'.
 
-If called with \\[universal-argument], then ask the user to select a
-matching song.  This may be useful if there are multiple tracks with
-similar names, and the top one isn’t the one required.
+If SUPPRESS-OPEN is non-nil, don't pop up a window with lyrics.  This
+is useful when performing a mass fetch.
 
-If called with \\[universal-argument] \\[universal-argument],
-then also always fetch the lyric text."
+If CALLBACK is non-nil, call it with the resulting filename.
+
+If called with \\[universal-argument] or FORCE-FETCH is non-nil, then
+always refetch the lyrics text.
+
+If called with \\[universal-argument] \\[universal-argument] or SYNC
+is non-nil, then ask the user to select a matching song.  This may be
+useful if there are multiple tracks with similar names, and the top
+one isn’t the one required."
   (interactive)
   (when (not track)
     (setq track (funcall lyrics-fetcher-current-track-method)))
@@ -150,15 +156,27 @@ then also always fetch the lyric text."
       (message "Error: no track found!")
     (let ((song-name (funcall lyrics-fetcher-format-song-name-method track))
           (file-name (funcall lyrics-fetcher-format-file-name-method track))
-          (sync (member (prefix-numeric-value current-prefix-arg) '(4 16)))
-          (force-fetch (member (prefix-numeric-value current-prefix-arg) '(16))))
+          ;; The function is indented to be called both interactive
+          ;; and via recursion with asyncronous callbacks, during with
+          ;; `current-prefix-arg' will be unset. So this is necessary
+          ;; to pass the behavior down the recursion.
+          (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
+          (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
       (if (and (not force-fetch) (lyrics-fetcher--lyrics-saved-p file-name))
-          (lyrics-fetcher--open-lyrics file-name track)
+          (progn
+            (message "Found fetched lyrics for: %s" song-name)
+            (when callback
+              (funcall callback file-name))
+            (unless suppress-open
+              (lyrics-fetcher--open-lyrics file-name track)))
         (funcall
          lyrics-fetcher-fetch-method track
          (lambda (result)
            (lyrics-fetcher--save-lyrics result file-name)
-           (lyrics-fetcher--open-lyrics file-name track))
+           (unless suppress-open
+             (lyrics-fetcher--open-lyrics file-name track))
+           (when callback
+             (funcall callback file-name)))
          sync)))))
 
 (defun lyrics-fetcher-show-lyrics-query (query)
@@ -170,6 +188,62 @@ e.g. \"Queen Show Must Go On\".
 See `lyrics-fetcher-show-lyrics' for behavior."
   (interactive "sEnter query: ")
   (lyrics-fetcher-show-lyrics query))
+
+(defun lyrics-fetcher-emms-browser-fetch-at-point ()
+  "Fetch data for the current point in EMMS browser.
+
+If the point contains just one song, it will be fetched the usual way
+via `lyrics-fetcher-show-lyrics'.  Lyrics will be show upon successful
+completion.
+
+If the point contains many songs (e.g. it's an album), the lyrics
+will be fetched consequentially for every song.  Note that the
+process will be stopped at the first failure.
+
+Behavior of the function is modified by \\[universal-argument]
+the same way as `lyrics-fetcher-show-lyrics'."
+  (interactive)
+  (let ((data (emms-browser-bdata-at-point)))
+    (if (not data)
+        (message "Nothing is found at point!")
+      (if (eq (cdr (assoc 'type data)) 'info-title)
+          (lyrics-fetcher-show-lyrics (cdadr (assoc 'data data)))
+        (lyrics-fetcher--fetch-many
+         (lyrics-fetcher--emms-extract-songs data))))))
+
+(defun lyrics-fetcher--emms-extract-songs (bdata)
+  "Extract list song alists from EMMS BDATA at point."
+  (if (eq (cdr (assoc 'type bdata)) 'info-title)
+      (list (cdadr (assoc 'data bdata)))
+    (let ((songs '()))
+      (dolist (datum (cdr (assoc 'data bdata)))
+        (setq songs (append songs (lyrics-fetcher--emms-extract-songs datum))))
+      songs)))
+
+(cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync)
+  "Fetch lyrics for every track in the TRACKS list.
+
+This functions calls itself recursively.  START is an indicator of
+position in the list.
+
+FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
+  (unless start
+    (setq start 0))
+  (message "Fetching lyrics for %s / %s songs" start (+ start (length tracks)))
+  (let ((current-prefix-arg current-prefix-arg)
+        (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
+        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+    (unless (seq-empty-p tracks)
+      (lyrics-fetcher-show-lyrics
+       (car tracks)
+       :suppress-open t
+       :callback
+       (lambda (&rest _)
+         (lyrics-fetcher--fetch-many
+          (cdr tracks)
+          :start (+ start 1)
+          :force-fetch force-fetch
+          :sync sync))))))
 
 (defun lyrics-fetcher--lyrics-saved-p (filename)
   "Check if lyrics for FILENAME are already saved."
@@ -213,8 +287,8 @@ TRACK is either a string or EMMS alist."
 (defvar lyrics-fetcher-view-mode-map
   (let ((keymap (make-sparse-keymap)))
     (define-key keymap (kbd "q") 'lyrics-fetcher--close-lyrics)
-    (when (fboundp 'evil-define-key)
-      (evil-define-key 'normal keymap
+    (when (fboundp 'evil-define-key*)
+      (evil-define-key* 'normal keymap
         "q" 'lyrics-fetcher--close-lyrics))
     keymap)
   "Keymap for `lyrics-fetcher-mode'.")

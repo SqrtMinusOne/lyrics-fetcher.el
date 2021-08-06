@@ -65,7 +65,7 @@ user to pick the matching search result."
                    callback
                    sync)))
       :error (cl-function
-              (lambda (&&key error-thrown &allow-other-keys)
+              (lambda (&key error-thrown &allow-other-keys)
                 (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher--genius-format-query (track)
@@ -143,8 +143,9 @@ expensive."
                              (buffer-substring-no-properties
                               (point-min)
                               (point-max)))))))
+    :error
     (cl-function
-     (lambda (&&key error-thrown &allow-other-keys)
+     (lambda (&key error-thrown &allow-other-keys)
        (message "Error!: %S" error-thrown)))))
 
 (provide 'lyrics-fetcher-genius)
