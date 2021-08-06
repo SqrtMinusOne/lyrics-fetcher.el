@@ -39,7 +39,7 @@
   'lyrics-fetcher-genius-do-search
   "A function to perform fetching.
 
-As for now, only genius is available, but this is a point of
+As of now, only genius is available, but this is a point of
 extensibility."
   :type 'function
   :options '(lyrics-fetcher-genius-do-search)
@@ -80,6 +80,15 @@ Has to receive either a string or EMMS alist.  Take a look at
 
 Has to receive either a string or EMMS alist.  Take a look at
 `lyrics-fetcher-format-file-name' for the default implementation."
+  :type 'function
+  :group 'lyrics-fetcher)
+
+(defcustom lyrics-fetcher-download-cover-method
+  'lyrics-fetcher-genius-download-cover
+  "A function to perform downloading album cover.
+
+As of now, only genius is available, but this is a point of
+extensibility."
   :type 'function
   :group 'lyrics-fetcher)
 
