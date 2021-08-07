@@ -51,8 +51,12 @@ The flow is at follows:
 3. Fetch lyrics from HTML page of the result
 4. Call CALLBACK with the resulting lyrics string
 
-For TRACK and SYNC arguments, take a look at
-`lyrics-fetcher--genius-do-query'."
+TRACK should be EMMS-compatible alist or string, take a look at
+`lyrics-fetcher--genius-format-query'.  If the search is
+successful, CALLBACK will be called with the result.
+
+If SYNC is non-nil, perform request synchronously and ask the
+user to pick the matching search result."
   (lyrics-fetcher--genius-do-query
    track
    (lambda (data)
@@ -71,8 +75,9 @@ TRACK should be EMMS-compatible alist or string, take a look at
 `lyrics-fetcher--genius-format-query'.  If the search is
 successful, CALLBACK will be called with the result.
 
-If SYNC is non-nil, perform request synchronously and ask the
-user to pick the matching search result."
+SYNC determines whether the request is syncronous.  The parameter
+is useful when it is neccessary to ask user for something right
+after the request."
   (if (string-empty-p lyrics-fetcher-genius-access-token)
       (message "Genius client access token not set!")
     (message "Sending a query to genius API...")
@@ -143,9 +148,7 @@ first song."
 (defun lyrics-fetcher--genius-fetch-lyrics (url callback &optional sync)
   "Fetch lyrics from genius.com page at URL and call CALLBACK with result.
 
-If SYNC is non-nil, the request will be performed synchronously, but
-the function will still make Emacs lag, as HTML parsing is pretty
-expensive."
+If SYNC is non-nil, the request will be performed synchronously."
   (message "Getting lyrics from %s" url)
   (request url
     :parser 'buffer-string
@@ -171,14 +174,16 @@ expensive."
 (defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync)
   "Downloads album cover of TRACK.
 
-Requies `lyrics-fetcher-genius-access-token' to be set.
+Requies `lyrics-fetcher-genius-access-token' to be set and
+imagemagick's \"convert\" to be available in PATH.
 
 TRACK should be EMMS-compatible alist or string, take a look at
 `lyrics-fetcher--genius-format-query'.  If the search is
-successful, CALLBACK will be called with the resulting lyrics
-text.
+successful, CALLBACK will be called with the resulting filename of the
+large cover.
 
-In EMMS, track contains all posible information about the album.
+In EMMS, track contains all posible information about the album, so a
+sample track is used instead of an actual album object.
 
 The file will be saved to FOLDER and will be named
 \"cover_large.<extension>\".
@@ -201,7 +206,7 @@ If SYNC is non-nil, user will be prompted for a matching song."
 The file will be saved to FOLDER and will be named
 \"cover_large.<extension>\".
 
-CALLBACK will be called with a path to the resulting file."
+CALLBACK is passed to `lyrics-fetcher--genius-save-album-url'."
   (request
     (format "https://api.genius.com/songs/%s" id)
     :parser 'json-read
@@ -229,7 +234,7 @@ CALLBACK will be called with the path to the resulting file."
                                      (assoc 'response data)))))))
       (if (not url)
           (message "Album cover not found")
-        (message "Downloading cover image...")
+        (message "Downloading the cover image...")
         (request url
           :encoding 'binary
           :complete

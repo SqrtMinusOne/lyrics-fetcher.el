@@ -106,7 +106,6 @@ extensibility."
   :group 'lyrics-fetcher)
 
 ;;; Actual lyrics fetching
-
 (defun lyrics-fetcher-format-song-name (track)
   "Format TRACK to a human-readable form.
 
@@ -180,10 +179,10 @@ one isn’t the one required."
       (message "Error: no track found!")
     (let ((song-name (funcall lyrics-fetcher-format-song-name-method track))
           (file-name (funcall lyrics-fetcher-format-file-name-method track))
-          ;; The function is indented to be called both interactive
-          ;; and via recursion with asyncronous callbacks, during with
+          ;; The function is indented to be called both interactively
+          ;; and via recursion in asyncronous callbacks, during with
           ;; `current-prefix-arg' will be unset. So this is necessary
-          ;; to pass the behavior down the recursion.
+          ;; to pass the behavior down the recursive calls.
           (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
           (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
       (if (and (not force-fetch) (lyrics-fetcher--lyrics-saved-p file-name))
@@ -238,7 +237,7 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
           :sync sync))))))
 
 ;;; EMMS integration
-(defun lyrics-fetcher-emms-browser-fetch-at-point ()
+(defun lyrics-fetcher-emms-browser-show-at-point ()
   "Fetch data for the current point in EMMS browser.
 
 If the point contains just one song, it will be fetched the usual way
@@ -246,8 +245,8 @@ via `lyrics-fetcher-show-lyrics'.  Lyrics will be show upon successful
 completion.
 
 If the point contains many songs (e.g. it's an album), the lyrics
-will be fetched consequentially for every song.  Note that the
-process will be stopped at the first failure.
+will be fetched consequentially for every song.  The process stops at
+the first failure.
 
 Behavior of the function is modified by \\[universal-argument]
 the same way as `lyrics-fetcher-show-lyrics'."
@@ -272,6 +271,10 @@ the same way as `lyrics-fetcher-show-lyrics'."
 (defun lyrics-fetcher-emms-browser-fetch-covers-at-point ()
   "Fetch album covers for the current point in EMMS browser.
 
+If the point contains multiple albums, the covers will be fetched
+consequentially for each album.  The process stops at
+the first failure.
+
 Behavior of the function is modified by \\[universal-argument]
 the same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
@@ -284,7 +287,7 @@ the same way as `lyrics-fetcher-show-lyrics'."
 (defun lyrics-fetcher--emms-extract-albums (bdata)
   "Extract a list of sample song alists from each album in BDATA.
 
-One sample song per each album."
+One sample song is given per each album."
   (cond
    ((eq (cdr (assoc 'type bdata)) 'info-album)
     (list (cdadr (assoc 'data (cdadr (assoc 'data bdata))))))
@@ -351,8 +354,6 @@ TRACK is either a string or EMMS alist."
 \\{lyrics-fetcher-view-mode-map}")
 
 ;;; Album cover fetching
-
-
 (cl-defun lyrics-fetcher--fetch-cover-many (tracks &optional &key start force-fetch sync)
   "Fetch album covers for every track in the TRACKS list.
 
