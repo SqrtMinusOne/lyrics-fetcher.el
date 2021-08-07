@@ -1,11 +1,11 @@
-;;; lyrics-fetcher-genius.el --- fetch song lyrics -*- lexical-binding: t -*-
+;;; lyrics-fetcher.el --- fetch song lyrics -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27") (emms "7") (f "0.20.0"))
+;; Package-Requires: ((emacs "27") (emms "7.5") (f "0.20.0") (request "0.3.2"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
 ;; This file is NOT part of GNU Emacs.
@@ -147,6 +147,7 @@ The function has to take into account that:
               (substring artist 0 (min (length artist) 40))
               (substring title 0 (min (length title) 190))))))
 
+;;;###autoload
 (cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open suppress-switch callback force-fetch sync)
   "Show lyrics for TRACK.
 
@@ -205,6 +206,7 @@ one isn’t the one required."
            (funcall callback file-name)))
        sync))))
 
+;;;###autoload
 (defun lyrics-fetcher-show-lyrics-query (query)
   "Fetch lyrics from a text QUERY.
 
@@ -240,6 +242,8 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
           :sync sync))))))
 
 ;;; EMMS integration
+
+;;;###autoload
 (defun lyrics-fetcher-emms-browser-show-at-point ()
   "Fetch data for the current point in EMMS browser.
 
@@ -271,6 +275,7 @@ the same way as `lyrics-fetcher-show-lyrics'."
         (setq songs (append songs (lyrics-fetcher--emms-extract-songs datum))))
       songs)))
 
+;;;###autoload
 (defun lyrics-fetcher-emms-browser-fetch-covers-at-point ()
   "Fetch album covers for the current point in EMMS browser.
 
@@ -287,6 +292,7 @@ the same way as `lyrics-fetcher-show-lyrics'."
       (lyrics-fetcher--fetch-cover-many
        (lyrics-fetcher--emms-extract-albums data)))))
 
+;;;###autoload
 (defun lyrics-fetcher-emms-browser-open-large-cover-at-point ()
   "Open large_cover for the current point in EMMS browser."
   (interactive)
@@ -339,6 +345,8 @@ When NO-SWITCH is non-nil, don't switch to buffer."
                   (funcall lyrics-fetcher-format-song-name-method
                            (or track filename)))))
     (with-current-buffer buffer
+      ;; If the buffer already has this mode, disable read-only-mode
+      ;; for the time being.
       (read-only-mode -1)
       (erase-buffer)
       (insert-file-contents (lyrics-fetcher--process-filename filename))
@@ -382,10 +390,11 @@ the same way as `lyrics-fetcher-show-lyrics'."
     keymap)
   "Keymap for `lyrics-fetcher-mode'.")
 
-(define-derived-mode lyrics-fetcher-view-mode read-only-mode "Lyrics view"
+(define-derived-mode lyrics-fetcher-view-mode text-mode "Lyrics view"
   "Major mode for viewing lyrics.
 
-\\{lyrics-fetcher-view-mode-map}")
+\\{lyrics-fetcher-view-mode-map}"
+  (read-only-mode 1))
 
 ;;; Album cover fetching
 (cl-defun lyrics-fetcher--fetch-cover-many (tracks &optional &key start force-fetch sync)
