@@ -147,7 +147,7 @@ The function has to take into account that:
               (substring artist 0 (min (length artist) 40))
               (substring title 0 (min (length title) 190))))))
 
-(cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open callback force-fetch sync)
+(cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open suppress-switch callback force-fetch sync)
   "Show lyrics for TRACK.
 
 TRACK can be either a string or an EMMS alist.  If TRACK is not
@@ -162,6 +162,9 @@ saved with a name from `lyrics-fetcher-format-file-name-method'.
 
 If SUPPRESS-OPEN is non-nil, don't pop up a window with lyrics.  This
 is useful when performing a mass fetch.
+
+If SUPPRESS-SWITCH is non-nil, create a buffer with lyrics but
+don't switch to it.
 
 If CALLBACK is non-nil, call it with the resulting filename.
 
@@ -197,7 +200,7 @@ one isn’t the one required."
        (lambda (result)
          (lyrics-fetcher--save-lyrics result file-name)
          (unless suppress-open
-           (lyrics-fetcher--open-lyrics file-name track))
+           (lyrics-fetcher--open-lyrics file-name track suppress-switch))
          (when callback
            (funcall callback file-name)))
        sync))))
@@ -326,19 +329,24 @@ FILENAME shoud be given without extension."
     (f-mkdir lyrics-fetcher-lyrics-folder))
   (f-write text 'utf-8 (lyrics-fetcher--process-filename filename)))
 
-(defun lyrics-fetcher--open-lyrics (filename &optional track)
+(defun lyrics-fetcher--open-lyrics (filename &optional track no-switch)
   "Open lyrics for in FILENAME in `lyrics-fetcher-lyrics-folder'.
 
-TRACK is either a string or EMMS alist."
-  (let ((buffer (generate-new-buffer
-                 (funcall lyrics-fetcher-format-song-name-method
-                          (or track filename)))))
+TRACK is either a string or EMMS alist.
+
+When NO-SWITCH is non-nil, don't switch to buffer."
+  (let* ((buffer (get-buffer-create
+                  (funcall lyrics-fetcher-format-song-name-method
+                           (or track filename)))))
     (with-current-buffer buffer
+      (read-only-mode -1)
+      (erase-buffer)
       (insert-file-contents (lyrics-fetcher--process-filename filename))
       (lyrics-fetcher-view-mode)
       (when track
         (setq-local track track))
-      (switch-to-buffer-other-window buffer))))
+      (unless no-switch
+        (switch-to-buffer-other-window buffer)))))
 
 (defun lyrics-fetcher--process-filename (filename)
   "Add the set folder and extension to FILENAME."
@@ -347,17 +355,30 @@ TRACK is either a string or EMMS alist."
    filename
    lyrics-fetcher-lyrics-file-extension))
 
-(defun lyrics-fetcher--close-lyrics ()
+(defun lyrics-fetcher-view-close-lyrics ()
   "Close a window and kill its buffer."
   (interactive)
   (quit-window t))
 
+(defun lyrics-fetcher-view-update-lyrics ()
+  "Refetch lyrics for the current lyrics view buffer.
+
+Behavior of the function is modified by \\[universal-argument]
+the same way as `lyrics-fetcher-show-lyrics'."
+  (interactive)
+  (lyrics-fetcher-show-lyrics
+   track
+   :force-fetch t
+   :suppress-switch t))
+
 (defvar lyrics-fetcher-view-mode-map
   (let ((keymap (make-sparse-keymap)))
-    (define-key keymap (kbd "q") 'lyrics-fetcher--close-lyrics)
+    (define-key keymap (kbd "q") 'lyrics-fetcher-view-close-lyrics)
+    (define-key keymap (kbd "r") 'lyrics-fetcher-view-update-lyrics)
     (when (fboundp 'evil-define-key*)
       (evil-define-key* 'normal keymap
-        "q" 'lyrics-fetcher--close-lyrics))
+        "q" 'lyrics-fetcher-view-close-lyrics
+        "r" 'lyrics-fetcher-view-update-lyrics))
     keymap)
   "Keymap for `lyrics-fetcher-mode'.")
 
