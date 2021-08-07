@@ -92,6 +92,8 @@ extensibility."
   :type 'function
   :group 'lyrics-fetcher)
 
+;;; Performing actual fetching
+
 (defun lyrics-fetcher-format-song-name (track)
   "Format TRACK to a human-readable form.
 
@@ -198,37 +200,6 @@ See `lyrics-fetcher-show-lyrics' for behavior."
   (interactive "sEnter query: ")
   (lyrics-fetcher-show-lyrics query))
 
-(defun lyrics-fetcher-emms-browser-fetch-at-point ()
-  "Fetch data for the current point in EMMS browser.
-
-If the point contains just one song, it will be fetched the usual way
-via `lyrics-fetcher-show-lyrics'.  Lyrics will be show upon successful
-completion.
-
-If the point contains many songs (e.g. it's an album), the lyrics
-will be fetched consequentially for every song.  Note that the
-process will be stopped at the first failure.
-
-Behavior of the function is modified by \\[universal-argument]
-the same way as `lyrics-fetcher-show-lyrics'."
-  (interactive)
-  (let ((data (emms-browser-bdata-at-point)))
-    (if (not data)
-        (message "Nothing is found at point!")
-      (if (eq (cdr (assoc 'type data)) 'info-title)
-          (lyrics-fetcher-show-lyrics (cdadr (assoc 'data data)))
-        (lyrics-fetcher--fetch-many
-         (lyrics-fetcher--emms-extract-songs data))))))
-
-(defun lyrics-fetcher--emms-extract-songs (bdata)
-  "Extract list song alists from EMMS BDATA at point."
-  (if (eq (cdr (assoc 'type bdata)) 'info-title)
-      (list (cdadr (assoc 'data bdata)))
-    (let ((songs '()))
-      (dolist (datum (cdr (assoc 'data bdata)))
-        (setq songs (append songs (lyrics-fetcher--emms-extract-songs datum))))
-      songs)))
-
 (cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync)
   "Fetch lyrics for every track in the TRACKS list.
 
@@ -253,6 +224,56 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
           :start (+ start 1)
           :force-fetch force-fetch
           :sync sync))))))
+
+;;; EMMS integration
+
+(defun lyrics-fetcher-emms-browser-fetch-at-point ()
+  "Fetch data for the current point in EMMS browser.
+
+If the point contains just one song, it will be fetched the usual way
+via `lyrics-fetcher-show-lyrics'.  Lyrics will be show upon successful
+completion.
+
+If the point contains many songs (e.g. it's an album), the lyrics
+will be fetched consequentially for every song.  Note that the
+process will be stopped at the first failure.
+
+Behavior of the function is modified by \\[universal-argument]
+the same way as `lyrics-fetcher-show-lyrics'."
+  (interactive)
+  (let ((data (emms-browser-bdata-at-point)))
+    (if (not data)
+        (message "Nothing is found at point!")
+      (if (eq (cdr (assoc 'type data)) 'info-title)
+          (lyrics-fetcher-show-lyrics (cdadr (assoc 'data data)))
+        (lyrics-fetcher--fetch-many
+         (lyrics-fetcher--emms-extract-songs data))))))
+
+(defun lyrics-fetcher--emms-extract-songs (bdata)
+  "Extract a list song alists from EMMS BDATA at point."
+  (if (eq (cdr (assoc 'type bdata)) 'info-title)
+      (list (cdadr (assoc 'data bdata)))
+    (let ((songs '()))
+      (dolist (datum (cdr (assoc 'data bdata)))
+        (setq songs (append songs (lyrics-fetcher--emms-extract-songs datum))))
+      songs)))
+
+(defun lyrics-fetcher--emms-extract-albums (bdata)
+  "Extract a list of sample song alists from each album in BDATA.
+
+One sample song per each album."
+  (cond
+   ((eq (cdr (assoc 'type bdata)) 'info-album)
+    (list (cdadr (assoc 'data (cdadr (assoc 'data bdata))))))
+   ((eq (cdr (assoc 'type bdata)) 'info-title)
+    (list (cdadr (assoc 'data bdata))))
+   (t (let ((sample-songs '()))
+        (dolist (datum (cdr (assoc 'data bdata)))
+          (setq sample-songs
+                (append sample-songs (lyrics-fetcher--emms-extract-albums datum))))
+        sample-songs))))
+
+;;; Operating with lyric files
 
 (defun lyrics-fetcher--lyrics-saved-p (filename)
   "Check if lyrics for FILENAME are already saved."
