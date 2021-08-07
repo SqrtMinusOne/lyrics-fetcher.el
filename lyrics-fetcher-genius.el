@@ -5,7 +5,7 @@
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27") (request "0.3.2"))
+;; Package-Requires: ((emacs "27") (request "0.3.2") (f "0.20.0"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
 ;; This file is NOT part of GNU Emacs.
@@ -33,6 +33,7 @@
 (require 'json)
 (require 'seq)
 (require 'shr)
+(require 'f)
 
 (defcustom lyrics-fetcher-genius-access-token nil
   "Genius access token.  Get one at https://genius.com."
@@ -143,7 +144,7 @@ first song."
   "Fetch lyrics from genius.com page at URL and call CALLBACK with result.
 
 If SYNC is non-nil, the request will be performed synchronously, but
-the function will still make Emacs lags, as HTML parsing is pretty
+the function will still make Emacs lag, as HTML parsing is pretty
 expensive."
   (message "Getting lyrics from %s" url)
   (request url
@@ -167,7 +168,7 @@ expensive."
      (lambda (&key error-thrown &allow-other-keys)
        (message "Error!: %S" error-thrown)))))
 
-(defun lyrics-fetcher-genius-download-cover (track callback folder)
+(defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync)
   "Downloads album cover of TRACK.
 
 Requies `lyrics-fetcher-genius-access-token' to be set.
@@ -177,23 +178,28 @@ TRACK should be EMMS-compatible alist or string, take a look at
 successful, CALLBACK will be called with the resulting lyrics
 text.
 
-The file will be saved to FOLDER and will be named
-\"cover_full.<extension>\".
+In EMMS, track contains all posible information about the album.
 
-CALLBACK will be called with a path to the resulting file."
+The file will be saved to FOLDER and will be named
+\"cover_large.<extension>\".
+
+CALLBACK will be called with a path to the resulting file.
+
+If SYNC is non-nil, user will be prompted for a matching song."
   (lyrics-fetcher--genius-do-query
    track
    (lambda (data)
      (lyrics-fetcher--genius-save-album-picture
-      (lyrics-fetcher--genius-get-data-from-response data 'id)
+      (lyrics-fetcher--genius-get-data-from-response data 'id sync)
       callback
-      folder))))
+      folder))
+   sync))
 
 (defun lyrics-fetcher--genius-save-album-picture (id callback folder)
   "Save an album cover of a song of given ID.
 
 The file will be saved to FOLDER and will be named
-\"cover_full.<extension>\".
+\"cover_large.<extension>\".
 
 CALLBACK will be called with a path to the resulting file."
   (request
@@ -230,7 +236,7 @@ CALLBACK will be called with the path to the resulting file."
           (cl-function
            (lambda (&key data &allow-other-keys)
              (let ((filename
-                    (concat folder "cover_full" (url-file-extension url))))
+                    (concat folder "cover_large" (url-file-extension url))))
                (with-temp-file filename
                  (toggle-enable-multibyte-characters)
                  (set-buffer-file-coding-system 'raw-text)

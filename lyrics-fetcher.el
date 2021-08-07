@@ -5,7 +5,7 @@
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "27") (emms "7"))
+;; Package-Requires: ((emacs "27") (emms "7") (f "0.20.0"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
 ;; This file is NOT part of GNU Emacs.
@@ -29,6 +29,7 @@
 
 ;;; Code:
 (require 'lyrics-fetcher-genius)
+(require 'f)
 (require 'emms)
 
 (defgroup lyrics-fetcher ()
@@ -92,7 +93,19 @@ extensibility."
   :type 'function
   :group 'lyrics-fetcher)
 
-;;; Performing actual fetching
+(defcustom lyrics-fetcher-small-cover-size
+  "100x100"
+  "Small cover size."
+  :type 'string
+  :group 'lyrics-fetcher)
+
+(defcustom lyrics-fetcher-medium-cover-size
+  "200x200"
+  "Medium cover size."
+  :type 'string
+  :group 'lyrics-fetcher)
+
+;;; Actual lyrics fetching
 
 (defun lyrics-fetcher-format-song-name (track)
   "Format TRACK to a human-readable form.
@@ -210,8 +223,7 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
   (unless start
     (setq start 0))
   (message "Fetching lyrics for %s / %s songs" start (+ start (length tracks)))
-  (let ((current-prefix-arg current-prefix-arg)
-        (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
+  (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
         (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
     (unless (seq-empty-p tracks)
       (lyrics-fetcher-show-lyrics
@@ -226,7 +238,6 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
           :sync sync))))))
 
 ;;; EMMS integration
-
 (defun lyrics-fetcher-emms-browser-fetch-at-point ()
   "Fetch data for the current point in EMMS browser.
 
@@ -258,6 +269,18 @@ the same way as `lyrics-fetcher-show-lyrics'."
         (setq songs (append songs (lyrics-fetcher--emms-extract-songs datum))))
       songs)))
 
+(defun lyrics-fetcher-emms-browser-fetch-covers-at-point ()
+  "Fetch album covers for the current point in EMMS browser.
+
+Behavior of the function is modified by \\[universal-argument]
+the same way as `lyrics-fetcher-show-lyrics'."
+  (interactive)
+  (let ((data (emms-browser-bdata-at-point)))
+    (if (not data)
+        (message "Nothing is found at point!")
+      (lyrics-fetcher--fetch-cover-many
+       (lyrics-fetcher--emms-extract-albums data)))))
+
 (defun lyrics-fetcher--emms-extract-albums (bdata)
   "Extract a list of sample song alists from each album in BDATA.
 
@@ -277,16 +300,15 @@ One sample song per each album."
 
 (defun lyrics-fetcher--lyrics-saved-p (filename)
   "Check if lyrics for FILENAME are already saved."
-  (file-exists-p (lyrics-fetcher--process-filename filename)))
+  (f-exists-p (lyrics-fetcher--process-filename filename)))
 
 (defun lyrics-fetcher--save-lyrics (text filename)
   "Save TEXT of lyrics in `lyrics-fetcher-lyrics-folder'.
 
 FILENAME shoud be given without extension."
-  (unless (file-exists-p lyrics-fetcher-lyrics-folder)
-    (make-directory lyrics-fetcher-lyrics-folder))
-  (with-temp-file (lyrics-fetcher--process-filename filename)
-    (insert text)))
+  (unless (f-exists-p lyrics-fetcher-lyrics-folder)
+    (f-mkdir lyrics-fetcher-lyrics-folder))
+  (f-write text 'utf-8 (lyrics-fetcher--process-filename filename)))
 
 (defun lyrics-fetcher--open-lyrics (filename &optional track)
   "Open lyrics for in FILENAME in `lyrics-fetcher-lyrics-folder'.
@@ -327,6 +349,81 @@ TRACK is either a string or EMMS alist."
   "Major mode for viewing lyrics.
 
 \\{lyrics-fetcher-view-mode-map}")
+
+;;; Album cover fetching
+
+
+(cl-defun lyrics-fetcher--fetch-cover-many (tracks &optional &key start force-fetch sync)
+  "Fetch album covers for every track in the TRACKS list.
+
+This functions calls itself recursively.  START is an indicator of
+position in the list.
+
+FORCE-FETCH and SYNC are passed to `lyrics-fetcher--fetch-cover'."
+  (unless start
+    (setq start 0))
+  (message "Fetching covers for %s / %s albums" start (+ start (length tracks)))
+  (if (seq-empty-p tracks)
+      (message "Done. Refresh EMMS browser to see the result.")
+    (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
+          (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+      (lyrics-fetcher--fetch-cover
+       (car tracks)
+       :callback
+       (lambda (&rest _)
+         (lyrics-fetcher--fetch-cover-many
+          (cdr tracks)
+          :start (+ start 1)
+          :force-fetch force-fetch
+          :sync sync))))))
+
+(cl-defun lyrics-fetcher--fetch-cover (track &optional &key callback sync force-fetch)
+  "Fetch cover for a given TRACK.
+
+Call CALLBACK with the resulting filename of full cover.
+
+If SYNC is non-nil, prompt user for a matching track.
+
+If FORCE-FETCH is non-nil, always fetch regardless of whether the
+file exists."
+  (let ((covers-found (f-entries
+                       (f-dirname (cdr (assoc 'name track)))
+                       (lambda (f)
+                         (string-match-p
+                          (rx (* nonl) "cover_large" (* nonl)) f)))))
+    (if (and (not force-fetch)
+             (not (seq-empty-p covers-found)))
+        (progn
+          (message "Cover already downloaded")
+          (when callback
+            (funcall callback (car covers-found))))
+      (funcall lyrics-fetcher-download-cover-method
+               track
+               (lambda (filename)
+                 (lyrics-fetcher--generate-cover-sizes filename)
+                 (message "Saved cover for %s"
+                          (cdr (assoc 'info-album track)))
+                 (when callback
+                   (funcall callback filename)))
+               (concat (f-dirname (cdr (assoc 'name track))) "/")
+               sync))))
+
+(defun lyrics-fetcher--generate-cover-sizes (filename)
+  "Create small and medium versions of FILENAME.
+
+Requires imagemagick installed."
+  (shell-command-to-string
+   (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
+           filename
+           lyrics-fetcher-small-cover-size
+           lyrics-fetcher-small-cover-size
+           (f-join (f-dirname filename) (concat "cover_small." (f-ext filename)))))
+  (shell-command-to-string
+   (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
+           filename
+           lyrics-fetcher-medium-cover-size
+           lyrics-fetcher-medium-cover-size
+           (f-join (f-dirname filename) (concat "cover_med." (f-ext filename))))))
 
 (provide 'lyrics-fetcher)
 ;;; lyrics-fetcher.el ends here
