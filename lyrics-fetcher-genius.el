@@ -31,6 +31,7 @@
 (require 'request)
 (require 'cl-lib)
 (require 'json)
+(require 'subr)
 (require 'seq)
 (require 'shr)
 (require 'f)
@@ -38,6 +39,14 @@
 (defcustom lyrics-fetcher-genius-access-token nil
   "Genius access token.  Get one at https://genius.com."
   :type '(string nil)
+  :group 'lyrics-fetcher)
+
+(defcustom lyrics-fetcher-genius-strip-parens-from-query t
+  "Strip parens from the query.
+
+I've noticed that these often break the search, e.g. when
+searching \"Song (feat. Artist)\""
+  :type 'boolean
   :group 'lyrics-fetcher)
 
 (defun lyrics-fetcher-genius-do-search (track callback &optional sync)
@@ -96,16 +105,26 @@ after the request."
 (defun lyrics-fetcher--genius-format-query (track)
   "Format track to genius.com query.
 
+When `lyrics-fetcher-genius-strip-parens-from-query' is non-nil,
+remove all the text in parens from the query,
+for instance (feat.  someone).
+
 TRACK should either be a string or an EMMS-compatible alist, which
 contains `info-albumartist' or `info-artist' and `info-title'"
   (if (stringp track)
       track
-    (concat
-     (or (cdr (assoc 'info-albumartist track))
-         (cdr (assoc 'info-artist track))
-         "")
-     " "
-     (cdr (assoc 'info-title track)))))
+    (let ((query (concat
+                  (or (cdr (assoc 'info-albumartist track))
+                      (cdr (assoc 'info-artist track))
+                      "")
+                  " "
+                  (cdr (assoc 'info-title track)))))
+      (when lyrics-fetcher-genius-strip-parens-from-query
+        (setq query (replace-regexp-in-string
+                     (rx (or (: "(" (* nonl) ")")
+                             (: "[" (* nonl) "]")))
+                     "" query)))
+      query)))
 
 (defun lyrics-fetcher--genius-format-song-title (entry)
   "Convert a Genius search ENTRY to a string, which can be used in selection."

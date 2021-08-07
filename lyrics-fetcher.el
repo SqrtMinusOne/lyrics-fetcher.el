@@ -439,7 +439,9 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher--fetch-cover'."
           (cdr tracks)
           :start (+ start 1)
           :force-fetch force-fetch
-          :sync sync))))))
+          :sync sync))
+       :sync sync
+       :force-fetch force-fetch))))
 
 (cl-defun lyrics-fetcher--fetch-cover (track &optional &key callback sync force-fetch)
   "Fetch cover for a given TRACK.
