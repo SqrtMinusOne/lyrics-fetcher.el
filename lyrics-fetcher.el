@@ -1,4 +1,4 @@
-;;; lyrics-fetcher.el --- fetch song lyrics -*- lexical-binding: t -*-
+;;; lyrics-fetcher.el --- fetch song lyrics and album covers -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
 
@@ -25,7 +25,8 @@
 
 ;;; Commentary:
 
-;; Fetch song lyrics TODO
+;; A package to fetch song lyrics and album covers, mainly to use with
+;; EMMS.  Take a look at the package README.org for more information.
 
 ;;; Code:
 (require 'lyrics-fetcher-genius)
@@ -33,24 +34,29 @@
 (require 'emms)
 
 (defgroup lyrics-fetcher ()
-  "TODO Fetch lyrics."
+  "Fetch song and album covers."
   :link '(url-link :tag "GitHub" "https://github.com/SqrtMinusOne/lyrics-fetcher.el"))
 
 (defcustom lyrics-fetcher-fetch-method
   'lyrics-fetcher-genius-do-search
   "A function to perform fetching.
 
-As of now, only genius is available, but this is a point of
-extensibility."
+As of now, genius.com is the only one available, but this is a
+point of extensibility."
   :type 'function
   :options '(lyrics-fetcher-genius-do-search)
   :group 'lyrics-fetcher)
 
 (defcustom lyrics-fetcher-current-track-method
   'emms-playlist-current-selected-track
-  "A function to get current playing track.
+  "A function to get the current playing track.
 
-By default uses the current selected track in EMMS playlist."
+By default uses the currently selected track in the EMMS playlist.
+
+This function has to return either a string or (recommended) an
+EMMS-like alist, which has to have the following fields:
+- info-artist or info-albumartist
+- info-title"
   :group 'lyrics-fetcher
   :type 'function)
 
@@ -62,7 +68,7 @@ By default uses the current selected track in EMMS playlist."
 
 (defcustom lyrics-fetcher-lyrics-file-extension
   ".txt"
-  "Default extension for lyric files."
+  "Default extension for the lyric files."
   :group 'lyrics-fetcher
   :type 'string)
 
@@ -77,7 +83,7 @@ Has to receive either a string or EMMS alist.  Take a look at
 
 (defcustom lyrics-fetcher-format-file-name-method
   'lyrics-fetcher-format-file-name
-  "A function to format song name to a valid filename.
+  "A function to format a song name to a valid filename.
 
 Has to receive either a string or EMMS alist.  Take a look at
 `lyrics-fetcher-format-file-name' for the default implementation."
@@ -88,8 +94,7 @@ Has to receive either a string or EMMS alist.  Take a look at
   'lyrics-fetcher-genius-download-cover
   "A function to perform downloading album cover.
 
-As of now, only genius is available, but this is a point of
-extensibility."
+As of now, genius.com is the only one available."
   :type 'function
   :group 'lyrics-fetcher)
 
@@ -118,14 +123,14 @@ TRACK should be either a string or EMMS alist."
             (cdr (assoc 'info-title track)))))
 
 (defun lyrics-fetcher--prepare-string (string)
-  "Prepare a STRING to be saved as a part of filename."
+  "Prepare a STRING to be saved as a part of a filename."
   (replace-regexp-in-string
    (rx (or "<" ">" ":" "\"" "/" "\\" "|" "?" "*"))
    "_"
    string))
 
 (defun lyrics-fetcher-format-file-name (track)
-  "Convert TRACK to a vaild filename.
+  "Convert TRACK to a valid filename.
 
 TRACK should be either a string or EMMS alist.
 
@@ -160,6 +165,10 @@ By default, opens already saved lyrics file if one exists,
 otherwise performs fetch according to
 `lyrics-fetcher-current-track-method'.  The resulting file will be
 saved with a name from `lyrics-fetcher-format-file-name-method'.
+
+Resulting lyric files are saved to the
+`lyrics-fetcher-lyrics-folder' and have the
+`lyrics-fetcher-lyrics-file-extension' extension
 
 If SUPPRESS-OPEN is non-nil, don't pop up a window with lyrics.  This
 is useful when performing a mass fetch.
@@ -220,7 +229,7 @@ See `lyrics-fetcher-show-lyrics' for behavior."
 (cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync)
   "Fetch lyrics for every track in the TRACKS list.
 
-This functions calls itself recursively.  START is an indicator of
+This function calls itself recursively.  START is an indicator of
 position in the list.
 
 FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
@@ -245,17 +254,17 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
 
 ;;;###autoload
 (defun lyrics-fetcher-emms-browser-show-at-point ()
-  "Fetch data for the current point in EMMS browser.
+  "Fetch data for the current point in the EMMS browser.
 
 If the point contains just one song, it will be fetched the usual way
-via `lyrics-fetcher-show-lyrics'.  Lyrics will be show upon successful
+via `lyrics-fetcher-show-lyrics'.  Lyrics will be shown upon successful
 completion.
 
 If the point contains many songs (e.g. it's an album), the lyrics
 will be fetched consequentially for every song.  The process stops at
 the first failure.
 
-Behavior of the function is modified by \\[universal-argument]
+The behavior of the function is modified by \\[universal-argument]
 the same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
   (let ((data (emms-browser-bdata-at-point)))
@@ -277,14 +286,25 @@ the same way as `lyrics-fetcher-show-lyrics'."
 
 ;;;###autoload
 (defun lyrics-fetcher-emms-browser-fetch-covers-at-point ()
-  "Fetch album covers for the current point in EMMS browser.
+  "Fetch album covers for the current point in the EMMS browser.
 
 If the point contains multiple albums, the covers will be fetched
-consequentially for each album.  The process stops at
-the first failure.
+consequentially for each album.  The process stops at the first
+failure.
 
-Behavior of the function is modified by \\[universal-argument]
-the same way as `lyrics-fetcher-show-lyrics'."
+Requires imagemagick's \"covert\" to be available in PATH.
+
+This requires songs' directories to be grouped by albums, i.e. one
+album per one folder.
+
+The files will be saved to the folder with names like
+\"cover_small.jpg\", \"cover_med.jpg\", \"cover_large.jpg\".
+
+You can customize the sizes via the `lyrics-fetcher-small-cover-size'
+and `lyrics-fetcher-medium-cover-size' variables.
+
+The behavior of the function is modified by \\[universal-argument] the
+same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
   (let ((data (emms-browser-bdata-at-point)))
     (if (not data)
@@ -330,7 +350,7 @@ One sample song is given per each album."
 (defun lyrics-fetcher--save-lyrics (text filename)
   "Save TEXT of lyrics in `lyrics-fetcher-lyrics-folder'.
 
-FILENAME shoud be given without extension."
+FILENAME should be given without extension."
   (unless (f-exists-p lyrics-fetcher-lyrics-folder)
     (f-mkdir lyrics-fetcher-lyrics-folder))
   (f-write text 'utf-8 (lyrics-fetcher--process-filename filename)))
@@ -426,7 +446,7 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher--fetch-cover'."
 
 Call CALLBACK with the resulting filename of full cover.
 
-If SYNC is non-nil, prompt user for a matching track.
+If SYNC is non-nil, prompt the user for a matching track.
 
 If FORCE-FETCH is non-nil, always fetch regardless of whether the
 file exists."

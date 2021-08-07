@@ -43,12 +43,12 @@
 (defun lyrics-fetcher-genius-do-search (track callback &optional sync)
   "Perform a lyrics search on 'genius.com'.
 
-Requies `lyrics-fetcher-genius-access-token' to be set.
+Requires `lyrics-fetcher-genius-access-token' to be set.
 
-The flow is at follows:
+The flow is as follows:
 1. Send a GET /search request with a text query
-2. Pick first result (or prompt user if SYNC is non-nil)
-3. Fetch lyrics from HTML page of the result
+2. Pick the first result (or prompt user if SYNC is non-nil)
+3. Fetch lyrics from the HTML page of the result
 4. Call CALLBACK with the resulting lyrics string
 
 TRACK should be EMMS-compatible alist or string, take a look at
@@ -69,14 +69,14 @@ user to pick the matching search result."
 (defun lyrics-fetcher--genius-do-query (track callback &optional sync)
   "Perform a song search on genius.com.
 
-Requies `lyrics-fetcher-genius-access-token' to be set.
+Requires `lyrics-fetcher-genius-access-token' to be set.
 
 TRACK should be EMMS-compatible alist or string, take a look at
 `lyrics-fetcher--genius-format-query'.  If the search is
 successful, CALLBACK will be called with the result.
 
-SYNC determines whether the request is syncronous.  The parameter
-is useful when it is neccessary to ask user for something right
+SYNC determines whether the request is synchronous.  The parameter
+is useful when it is necessary to ask the user for something right
 after the request."
   (when (string-empty-p lyrics-fetcher-genius-access-token)
     (error "Genius client access token not set!"))
@@ -115,9 +115,9 @@ contains `info-albumartist' or `info-artist' and `info-title'"
             (cdr (assoc 'lyrics_state result)))))
 
 (defun lyrics-fetcher--genius-get-data-from-response (data key &optional ask)
-  "Retrive a song KEY from the Genius response DATA.
+  "Retrieve a song KEY from the Genius response DATA.
 
-If ASK is non-nil, prompt user for a choice, otherwise select the
+If ASK is non-nil, prompt the user for a choice, otherwise select the
 first song."
   (when (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
     (error "Error: %" (cdr (assoc 'message (assoc 'meta data)))))
@@ -146,7 +146,7 @@ first song."
        (assoc key (assoc 'result (car results-songs)))))))
 
 (defun lyrics-fetcher--genius-fetch-lyrics (url callback &optional sync)
-  "Fetch lyrics from genius.com page at URL and call CALLBACK with result.
+  "Fetch lyrics from genius.com page at URL and call CALLBACK with the result.
 
 If SYNC is non-nil, the request will be performed synchronously."
   (message "Getting lyrics from %s" url)
@@ -174,23 +174,23 @@ If SYNC is non-nil, the request will be performed synchronously."
 (defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync)
   "Downloads album cover of TRACK.
 
-Requies `lyrics-fetcher-genius-access-token' to be set and
+Requires `lyrics-fetcher-genius-access-token' to be set and
 imagemagick's \"convert\" to be available in PATH.
 
 TRACK should be EMMS-compatible alist or string, take a look at
-`lyrics-fetcher--genius-format-query'.  If the search is
-successful, CALLBACK will be called with the resulting filename of the
-large cover.
+`lyrics-fetcher--genius-format-query'.  If the search is successful,
+CALLBACK will be called with the resulting filename of the large
+cover.
 
-In EMMS, track contains all posible information about the album, so a
-sample track is used instead of an actual album object.
+In EMMS, the track contains all possible information about the album,
+so a sample track is used instead of an actual album object.
 
 The file will be saved to FOLDER and will be named
 \"cover_large.<extension>\".
 
 CALLBACK will be called with a path to the resulting file.
 
-If SYNC is non-nil, user will be prompted for a matching song."
+If SYNC is non-nil, the user will be prompted for a matching song."
   (lyrics-fetcher--genius-do-query
    track
    (lambda (data)
@@ -201,7 +201,7 @@ If SYNC is non-nil, user will be prompted for a matching song."
    sync))
 
 (defun lyrics-fetcher--genius-save-album-picture (id callback folder)
-  "Save an album cover of a song of given ID.
+  "Save an album cover of a song of a given ID.
 
 The file will be saved to FOLDER and will be named
 \"cover_large.<extension>\".

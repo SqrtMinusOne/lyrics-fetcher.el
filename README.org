@@ -1,1 +1,94 @@
 #+TITLE: lyrics-fetcher.el
+
+A package to fetch song lyrics and album covers. Integrates with EMMS.
+
+[[./img/screenshot.png]]
+
+As of now, the only available backend is [[https://genius.com/][genius.com]], but in principle, new ones can be added.
+
+* Installation
+As the package isn't yet available anywhere but in this repository, you can clone the repository, add it to the =load-path= and =require= the package:
+#+begin_src emacs-lisp
+(require 'lyrics-fetcher)
+#+end_src
+
+My preferred way is to use =use-package= with =straight=:
+#+begin_src emacs-lisp
+(use-package lyrics-fetcher
+  :straight (:host github :repo "SqrtMinusOne/lyrics-fetcher.el")
+  :after (emms))
+#+end_src
+
+Install [[https://imagemagick.org/index.php][imagemagick]] if you want to download covers.
+
+Set [[https://docs.genius.com/][genius.com]] client access token. To do that, [[https://genius.com/api-clients/new][create a new client,]] click "Generate Access Token" and put the result to the =lyrics-fetcher-genius-access-token= variable. I do this with password-store:
+#+begin_src emacs-lisp
+(setq lyrics-fetcher-genius-access-token
+      (password-store-get "My_Online/APIs/genius.com"))
+#+end_src
+
+But of course, you can just hardcode the string.
+
+* Usage
+Available commands:
+- ~M-x lyrics-fetcher-show-lyrics~ - show lyrics for the current playing track.
+
+  The resulting lyric files are saved to the ~lyrics-fetcher-lyrics-folder~ and have the ~lyrics-fetcher-lyrics-file-extension~ extension. The folder will be created if it doesn't exist.
+
+  By default, the function opens an already saved lyrics file if one exists, otherwise tries to fetch the lyrics.
+
+  If called with =C-u=, then tries to fetch the text regardless of the latter.
+
+  If called with =C-u C-u=, prompts the user to select a matching song. That is helpful when there are multiple songs with similar names, and the top one isn't the right one.
+- ~M-x lyrics-fetcher-show-lyrics-query~ - fetch lyrics by a text query.
+
+  Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.
+
+EMMS integration:
+- ~M-x lyrics-fetcher-emms-browser-show-at-point~ - fetch data for the current point in EMMS browser.
+
+  If the point contains just one song, it will be fetched the usual way and lyrics will be shown upon successful completion.
+
+  If the point contains many songs (e.g. it's an album), the lyrics will be fetched consequentially for every song. The process then will stop at the first failure.
+
+  Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.
+- ~M-x lyrics-fetcher-emms-browser-fetch-covers-at-point~ - fetch album covers for the current point in the EMMS browser.
+
+  This functionality requires songs' directories to be grouped by albums, i.e. one album per one folder.
+
+  The files will be saved to the folder with names like "cover_small.jpg", "cover_med.jpg", "cover_large.jpg".
+
+  You can customize the sizes via the ~lyrics-fetcher-small-cover-size~ and ~lyrics-fetcher-medium-cover-size~ variables.
+
+  Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.
+- ~M-x lyrics-fetcher-emms-browser-open-large-cover-at-point~ - open large_cover for the current point in EMMS browser.
+
+Lyric view mode keybindings:
+- =q= - close the lyrics buffer
+- =r= - refetch the lyrics in the buffer
+* Customization and extension
+** Lyrics file naming and location
+As was outlined above, lyrics files are saved to ~lyrics-fetcher-lyrics-folder~ and have an extension set in ~lyrics-fetcher-lyrics-file-extension~.
+
+Take a look at the ~lyrics-fetcher-format-song-name-method~ and ~lyrics-fetcher-format-file-name-method~ variables if you want to customize the lyrics buffer and file naming.
+** Using another player than EMMS
+To use another player, customize ~lyrics-fetcher-current-track-method~.
+
+This variable contains a function that returns the current playing track. The return format has to be either a string or (recommended) an EMMS-like alist, which has to have the following fields:
+- =info-artist= or =info-albumartist=
+- =info-title=
+** Adding another backend
+A function to perform the lyric fetching is set in ~lyrics-fetcher-fetch-method~.
+
+The function has to receive 3 arguments:
+- =track= - a string or alist, as outlined [[*Using other player than EMMS][above]].
+- =callback= - the function which has to be called with the resulting lyrics string
+- =sync= - if non-nil, inquire the user about the possible choices. This is called =sync= because then it is reasonable to perform the request synchronously, as otherwise, it won't be nice to suddenly throw a prompt at the user.
+
+The album cover fetching is similar. The corresponding function is set in ~lyrics-fetcher-download-cover-method~ and has to receive the following parameters:
+- =track= - as above
+- =callback= - has to be called with the path to the resulting file. This file should be named =cover_large.<extension>=.
+- =folder= - where the file has to be put
+- =sync= - as above.
+
+The first argument is =track= because in EMMS all the required information is stored in tracks, and album data is deduced from tracks. So this package just takes a sample track in the album.
