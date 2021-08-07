@@ -173,34 +173,34 @@ is non-nil, then ask the user to select a matching song.  This may be
 useful if there are multiple tracks with similar names, and the top
 one isn’t the one required."
   (interactive)
-  (when (not track)
+  (unless track
     (setq track (funcall lyrics-fetcher-current-track-method)))
-  (if (not track)
-      (message "Error: no track found!")
-    (let ((song-name (funcall lyrics-fetcher-format-song-name-method track))
-          (file-name (funcall lyrics-fetcher-format-file-name-method track))
-          ;; The function is indented to be called both interactively
-          ;; and via recursion in asyncronous callbacks, during with
-          ;; `current-prefix-arg' will be unset. So this is necessary
-          ;; to pass the behavior down the recursive calls.
-          (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
-          (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
-      (if (and (not force-fetch) (lyrics-fetcher--lyrics-saved-p file-name))
-          (progn
-            (message "Found fetched lyrics for: %s" song-name)
-            (when callback
-              (funcall callback file-name))
-            (unless suppress-open
-              (lyrics-fetcher--open-lyrics file-name track)))
-        (funcall
-         lyrics-fetcher-fetch-method track
-         (lambda (result)
-           (lyrics-fetcher--save-lyrics result file-name)
-           (unless suppress-open
-             (lyrics-fetcher--open-lyrics file-name track))
-           (when callback
-             (funcall callback file-name)))
-         sync)))))
+  (unless track
+    (error "Error: no track found!"))
+  (let ((song-name (funcall lyrics-fetcher-format-song-name-method track))
+        (file-name (funcall lyrics-fetcher-format-file-name-method track))
+        ;; The function is indented to be called both interactively
+        ;; and via recursion in asyncronous callbacks, during with
+        ;; `current-prefix-arg' will be unset. So this is necessary
+        ;; to pass the behavior down the recursive calls.
+        (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
+        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+    (if (and (not force-fetch) (lyrics-fetcher--lyrics-saved-p file-name))
+        (progn
+          (message "Found fetched lyrics for: %s" song-name)
+          (when callback
+            (funcall callback file-name))
+          (unless suppress-open
+            (lyrics-fetcher--open-lyrics file-name track)))
+      (funcall
+       lyrics-fetcher-fetch-method track
+       (lambda (result)
+         (lyrics-fetcher--save-lyrics result file-name)
+         (unless suppress-open
+           (lyrics-fetcher--open-lyrics file-name track))
+         (when callback
+           (funcall callback file-name)))
+       sync))))
 
 (defun lyrics-fetcher-show-lyrics-query (query)
   "Fetch lyrics from a text QUERY.
@@ -253,7 +253,7 @@ the same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
   (let ((data (emms-browser-bdata-at-point)))
     (if (not data)
-        (message "Nothing is found at point!")
+        (error "Nothing is found at point!")
       (if (eq (cdr (assoc 'type data)) 'info-title)
           (lyrics-fetcher-show-lyrics (cdadr (assoc 'data data)))
         (lyrics-fetcher--fetch-many
@@ -280,9 +280,22 @@ the same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
   (let ((data (emms-browser-bdata-at-point)))
     (if (not data)
-        (message "Nothing is found at point!")
+        (error "Nothing is found at point!")
       (lyrics-fetcher--fetch-cover-many
        (lyrics-fetcher--emms-extract-albums data)))))
+
+(defun lyrics-fetcher-emms-browser-open-large-cover-at-point ()
+  "Open large_cover for the current point in EMMS browser."
+  (interactive)
+  (let ((tracks (lyrics-fetcher--emms-extract-albums (emms-browser-bdata-at-point))))
+    (when (seq-empty-p tracks)
+      (error "Nothing is found at point!"))
+    (let ((cover-file (lyrics-fetcher--get-cover-in-directory
+                       (f-dirname (cdr (assoc 'name (car tracks)))))))
+      (if (not cover-file)
+          (error "Cover not found")
+        (start-process "cover-open" nil
+                       "xdg-open" cover-file)))))
 
 (defun lyrics-fetcher--emms-extract-albums (bdata)
   "Extract a list of sample song alists from each album in BDATA.
@@ -387,17 +400,13 @@ If SYNC is non-nil, prompt user for a matching track.
 
 If FORCE-FETCH is non-nil, always fetch regardless of whether the
 file exists."
-  (let ((covers-found (f-entries
-                       (f-dirname (cdr (assoc 'name track)))
-                       (lambda (f)
-                         (string-match-p
-                          (rx (* nonl) "cover_large" (* nonl)) f)))))
-    (if (and (not force-fetch)
-             (not (seq-empty-p covers-found)))
+  (let ((cover-found (lyrics-fetcher--get-cover-in-directory
+                      (f-dirname (cdr (assoc 'name track))))))
+    (if (and (not force-fetch) cover-found)
         (progn
           (message "Cover already downloaded")
           (when callback
-            (funcall callback (car covers-found))))
+            (funcall callback cover-found)))
       (funcall lyrics-fetcher-download-cover-method
                track
                (lambda (filename)
@@ -408,6 +417,14 @@ file exists."
                    (funcall callback filename)))
                (concat (f-dirname (cdr (assoc 'name track))) "/")
                sync))))
+
+(defun lyrics-fetcher--get-cover-in-directory (dirname)
+  "Get a path to the large cover file in DIRNAME if one exists."
+  (car (f-entries
+        dirname
+        (lambda (f)
+          (string-match-p
+           (rx (* nonl) "cover_large" (* nonl)) f)))))
 
 (defun lyrics-fetcher--generate-cover-sizes (filename)
   "Create small and medium versions of FILENAME.

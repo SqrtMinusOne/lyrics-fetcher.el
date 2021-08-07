@@ -78,20 +78,20 @@ successful, CALLBACK will be called with the result.
 SYNC determines whether the request is syncronous.  The parameter
 is useful when it is neccessary to ask user for something right
 after the request."
-  (if (string-empty-p lyrics-fetcher-genius-access-token)
-      (message "Genius client access token not set!")
-    (message "Sending a query to genius API...")
-    (request "https://api.genius.com/search"
-      :params `(("q" . ,(lyrics-fetcher--genius-format-query track))
-                ("access_token" . ,lyrics-fetcher-genius-access-token))
-      :parser 'json-read
-      :sync sync
-      :success (cl-function
-                (lambda (&key data &allow-other-keys)
-                  (funcall callback data)))
-      :error (cl-function
-              (lambda (&key error-thrown &allow-other-keys)
-                (message "Error!: %S" error-thrown))))))
+  (when (string-empty-p lyrics-fetcher-genius-access-token)
+    (error "Genius client access token not set!"))
+  (message "Sending a query to genius API...")
+  (request "https://api.genius.com/search"
+    :params `(("q" . ,(lyrics-fetcher--genius-format-query track))
+              ("access_token" . ,lyrics-fetcher-genius-access-token))
+    :parser 'json-read
+    :sync sync
+    :success (cl-function
+              (lambda (&key data &allow-other-keys)
+                (funcall callback data)))
+    :error (cl-function
+            (lambda (&key error-thrown &allow-other-keys)
+              (message "Error!: %S" error-thrown)))))
 
 (defun lyrics-fetcher--genius-format-query (track)
   "Format track to genius.com query.
@@ -119,31 +119,31 @@ contains `info-albumartist' or `info-artist' and `info-title'"
 
 If ASK is non-nil, prompt user for a choice, otherwise select the
 first song."
-  (if (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
-      (message "Error: %" (cdr (assoc 'message (assoc 'meta data))))
-    (let* ((results (cdr (assoc 'hits (assoc 'response data))))
-           (results-songs (seq-filter
-                           (lambda (entry)
-                             (string-equal (cdr (assoc 'type entry)) "song"))
-                           results)))
-      (if (seq-empty-p results-songs)
-          (message "Error: no results!")
-        (cdr
-         (if ask
-             (let ((results-songs-for-select
-                    (mapcar
-                     (lambda (entry)
-                       (cons (lyrics-fetcher--genius-format-song-title entry)
-                             (assoc key (assoc 'result entry))))
-                     results-songs)))
-               (cdr
-                (assoc
-                 (completing-read
-                  "Pick a result: "
-                  results-songs-for-select
-                  nil t)
-                 results-songs-for-select)))
-           (assoc key (assoc 'result (car results-songs)))))))))
+  (when (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
+    (error "Error: %" (cdr (assoc 'message (assoc 'meta data)))))
+  (let* ((results (cdr (assoc 'hits (assoc 'response data))))
+         (results-songs (seq-filter
+                         (lambda (entry)
+                           (string-equal (cdr (assoc 'type entry)) "song"))
+                         results)))
+    (when (seq-empty-p results-songs)
+      (error "Error: no results!"))
+    (cdr
+     (if ask
+         (let ((results-songs-for-select
+                (mapcar
+                 (lambda (entry)
+                   (cons (lyrics-fetcher--genius-format-song-title entry)
+                         (assoc key (assoc 'result entry))))
+                 results-songs)))
+           (cdr
+            (assoc
+             (completing-read
+              "Pick a result: "
+              results-songs-for-select
+              nil t)
+             results-songs-for-select)))
+       (assoc key (assoc 'result (car results-songs)))))))
 
 (defun lyrics-fetcher--genius-fetch-lyrics (url callback &optional sync)
   "Fetch lyrics from genius.com page at URL and call CALLBACK with result.
@@ -225,33 +225,33 @@ DATA should be a response from GET /songs/:id.  The file will be saved
 to FOLDER and will be name \"cover_full.<extension>\".
 
 CALLBACK will be called with the path to the resulting file."
-  (if (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
-      (message "Error: %" (cdr (assoc 'message (assoc 'meta data))))
-    (let ((url (cdr
-                (assoc 'cover_art_url
-                       (assoc 'album
-                              (assoc 'song
-                                     (assoc 'response data)))))))
-      (if (not url)
-          (message "Album cover not found")
-        (message "Downloading the cover image...")
-        (request url
-          :encoding 'binary
-          :complete
-          (cl-function
-           (lambda (&key data &allow-other-keys)
-             (let ((filename
-                    (concat folder "cover_large" (url-file-extension url))))
-               (with-temp-file filename
-                 (toggle-enable-multibyte-characters)
-                 (set-buffer-file-coding-system 'raw-text)
-                 (seq-doseq (char data)
-                   (insert char)))
-               (funcall callback filename))))
-          :error
-          (cl-function
-           (lambda (&key error-thrown &allow-other-keys)
-             (message "Error!: %S" error-thrown))))))))
+  (when (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
+    (error "Error: %" (cdr (assoc 'message (assoc 'meta data)))))
+  (let ((url (cdr
+              (assoc 'cover_art_url
+                     (assoc 'album
+                            (assoc 'song
+                                   (assoc 'response data)))))))
+    (if (not url)
+        (message "Album cover not found")
+      (message "Downloading the cover image...")
+      (request url
+        :encoding 'binary
+        :complete
+        (cl-function
+         (lambda (&key data &allow-other-keys)
+           (let ((filename
+                  (concat folder "cover_large" (url-file-extension url))))
+             (with-temp-file filename
+               (toggle-enable-multibyte-characters)
+               (set-buffer-file-coding-system 'raw-text)
+               (seq-doseq (char data)
+                 (insert char)))
+             (funcall callback filename))))
+        :error
+        (cl-function
+         (lambda (&key error-thrown &allow-other-keys)
+           (message "Error!: %S" error-thrown)))))))
 
 (provide 'lyrics-fetcher-genius)
 ;;; lyrics-fetcher-genius.el ends here
