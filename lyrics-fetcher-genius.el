@@ -44,10 +44,31 @@
 
 Requies `lyrics-fetcher-genius-access-token' to be set.
 
+The flow is at follows:
+1. Send a GET /search request with a text query
+2. Pick first result (or prompt user if SYNC is non-nil)
+3. Fetch lyrics from HTML page of the result
+4. Call CALLBACK with the resulting lyrics string
+
+For TRACK and SYNC arguments, take a look at
+`lyrics-fetcher--genius-do-query'."
+  (lyrics-fetcher--genius-do-query
+   track
+   (lambda (data)
+     (lyrics-fetcher--genius-fetch-lyrics
+      (lyrics-fetcher--genius-get-data-from-response data 'url sync)
+      callback
+      sync))
+   sync))
+
+(defun lyrics-fetcher--genius-do-query (track callback &optional sync)
+  "Perform a song search on genius.com.
+
+Requies `lyrics-fetcher-genius-access-token' to be set.
+
 TRACK should be EMMS-compatible alist or string, take a look at
 `lyrics-fetcher--genius-format-query'.  If the search is
-successful, CALLBACK will be called with the resulting lyrics
-text.
+successful, CALLBACK will be called with the result.
 
 If SYNC is non-nil, perform request synchronously and ask the
 user to pick the matching search result."
@@ -61,10 +82,7 @@ user to pick the matching search result."
       :sync sync
       :success (cl-function
                 (lambda (&key data &allow-other-keys)
-                  (lyrics-fetcher--genius-fetch-lyrics
-                   (lyrics-fetcher--genius-get-data-from-response data 'key sync)
-                   callback
-                   sync)))
+                  (funcall callback data)))
       :error (cl-function
               (lambda (&key error-thrown &allow-other-keys)
                 (message "Error!: %S" error-thrown))))))
@@ -163,22 +181,13 @@ The file will be saved to FOLDER and will be named
 \"cover_full.<extension>\".
 
 CALLBACK will be called with a path to the resulting file."
-  (if (string-empty-p lyrics-fetcher-genius-access-token)
-      (message "Genius client access token not set!")
-    (message "Sending a query to genius API...")
-    (request "https://api.genius.com/search"
-      :params `(("q" . ,(lyrics-fetcher--genius-format-query track))
-                ("access_token" . ,lyrics-fetcher-genius-access-token))
-      :parser 'json-read
-      :success (cl-function
-                (lambda (&key data &allow-other-keys)
-                  (lyrics-fetcher--genius-save-album-picture
-                   (lyrics-fetcher--genius-get-data-from-response data 'id)
-                   callback
-                   folder)))
-      :error (cl-function
-              (lambda (&key error-thrown &allow-other-keys)
-                (message "Error!: %S" error-thrown))))))
+  (lyrics-fetcher--genius-do-query
+   track
+   (lambda (data)
+     (lyrics-fetcher--genius-save-album-picture
+      (lyrics-fetcher--genius-get-data-from-response data 'id)
+      callback
+      folder))))
 
 (defun lyrics-fetcher--genius-save-album-picture (id callback folder)
   "Save an album cover of a song of given ID.
@@ -211,7 +220,7 @@ CALLBACK will be called with the path to the resulting file."
                 (assoc 'cover_art_url
                        (assoc 'album
                               (assoc 'song
-                                     (assoc 'response my/test-song)))))))
+                                     (assoc 'response data)))))))
       (if (not url)
           (message "Album cover not found")
         (message "Downloading cover image...")
@@ -225,7 +234,7 @@ CALLBACK will be called with the path to the resulting file."
                (with-temp-file filename
                  (toggle-enable-multibyte-characters)
                  (set-buffer-file-coding-system 'raw-text)
-                 (seq-doseq (char my/picture)
+                 (seq-doseq (char data)
                    (insert char)))
                (funcall callback filename))))
           :error
