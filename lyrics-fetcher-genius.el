@@ -4,8 +4,6 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.1
-;; Package-Requires: ((emacs "27") (request "0.3.2") (f "0.20.0"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
 ;; This file is NOT part of GNU Emacs.
