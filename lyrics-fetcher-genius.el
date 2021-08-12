@@ -29,7 +29,6 @@
 (require 'request)
 (require 'cl-lib)
 (require 'json)
-(require 'subr)
 (require 'seq)
 (require 'shr)
 (require 'f)
