@@ -4,7 +4,7 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "27") (emms "7.5") (f "0.20.0") (request "0.3.2"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
@@ -499,18 +499,12 @@ If EDIT is non-nil, edit the query in minibuffer before search."
   "Create small and medium versions of FILENAME.
 
 Requires imagemagick installed."
-  (shell-command-to-string
-   (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
-           filename
-           lyrics-fetcher-small-cover-size
-           lyrics-fetcher-small-cover-size
-           (f-join (f-dirname filename) (concat "cover_small." (f-ext filename)))))
-  (shell-command-to-string
-   (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
-           filename
-           lyrics-fetcher-medium-cover-size
-           lyrics-fetcher-medium-cover-size
-           (f-join (f-dirname filename) (concat "cover_med." (f-ext filename))))))
+  (dolist (size `((,lyrics-fetcher-small-cover-size . "cover_small.")
+                  (,lyrics-fetcher-medium-cover-size . "cover_med.")))
+    (shell-command-to-string
+     (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
+             filename (car size) (car size)
+             (f-join (f-dirname filename) (concat (cdr size) (f-ext filename)))))))
 
 (provide 'lyrics-fetcher)
 ;;; lyrics-fetcher.el ends here
