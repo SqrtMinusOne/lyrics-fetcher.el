@@ -111,6 +111,9 @@ As of now, genius.com is the only one available."
   :type 'string
   :group 'lyrics-fetcher)
 
+(defvar lyrics-fetcher-current-track-method
+  "Current track in the lyrics view buffer")
+
 ;;; Actual lyrics fetching
 (defun lyrics-fetcher-format-song-name (track)
   "Format TRACK to a human-readable form.
@@ -383,7 +386,7 @@ When NO-SWITCH is non-nil, don't switch to buffer."
       (insert-file-contents (lyrics-fetcher--process-filename filename))
       (lyrics-fetcher-view-mode)
       (when track
-        (setq-local track track))
+        (setq-local lyrics-fetcher-current-track track))
       (unless no-switch
         (switch-to-buffer-other-window buffer)))))
 
@@ -406,7 +409,7 @@ Behavior of the function is modified by \\[universal-argument]
 the same way as `lyrics-fetcher-show-lyrics'."
   (interactive)
   (lyrics-fetcher-show-lyrics
-   track
+   lyrics-fetcher-current-track
    :force-fetch t
    :suppress-switch t))
 
@@ -442,7 +445,7 @@ FORCE-FETCH, SYNC and EDIT are passed to `lyrics-fetcher--fetch-cover'."
       (message "Done. Refresh EMMS browser to see the result.")
     (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16 64))))
           (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16 64))))
-          (edit (or sync (member (prefix-numeric-value current-prefix-arg) '(64)))))
+          (edit (or edit (member (prefix-numeric-value current-prefix-arg) '(64)))))
       (lyrics-fetcher--fetch-cover
        (car tracks)
        :callback
