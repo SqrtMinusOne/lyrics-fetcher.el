@@ -49,7 +49,7 @@ searching \"Song (feat. Artist)\""
   :type 'boolean
   :group 'lyrics-fetcher)
 
-(defun lyrics-fetcher-genius-do-search (track callback &optional sync)
+(defun lyrics-fetcher-genius-do-search (track callback &optional sync edit)
   "Perform a lyrics search on 'genius.com'.
 
 Requires `lyrics-fetcher-genius-access-token' to be set.
@@ -65,7 +65,11 @@ TRACK should be EMMS-compatible alist or string, take a look at
 successful, CALLBACK will be called with the result.
 
 If SYNC is non-nil, perform request synchronously and ask the
-user to pick the matching search result."
+user to pick the matching search result.
+
+When EDIT is non-nil, edit the query in minibuffer before search.
+Genius usually struggles to find song if there is extra
+information in the title."
   (lyrics-fetcher--genius-do-query
    track
    (lambda (data)
@@ -73,9 +77,10 @@ user to pick the matching search result."
       (lyrics-fetcher--genius-get-data-from-response data 'url sync)
       callback
       sync))
-   sync))
+   sync
+   edit))
 
-(defun lyrics-fetcher--genius-do-query (track callback &optional sync)
+(defun lyrics-fetcher--genius-do-query (track callback &optional sync edit)
   "Perform a song search on genius.com.
 
 Requires `lyrics-fetcher-genius-access-token' to be set.
@@ -86,12 +91,16 @@ successful, CALLBACK will be called with the result.
 
 SYNC determines whether the request is synchronous.  The parameter
 is useful when it is necessary to ask the user for something right
-after the request."
+after the request.
+
+When EDIT is non-nil, edit the query in minibuffer before search."
   (when (string-empty-p lyrics-fetcher-genius-access-token)
     (error "Genius client access token not set!"))
   (message "Sending a query to genius API...")
   (request "https://api.genius.com/search"
-    :params `(("q" . ,(lyrics-fetcher--genius-format-query track))
+    :params `(("q" . ,(lyrics-fetcher--genius-maybe-edit-query
+                       (lyrics-fetcher--genius-format-query track)
+                       edit))
               ("access_token" . ,lyrics-fetcher-genius-access-token))
     :parser 'json-read
     :sync sync
@@ -101,6 +110,12 @@ after the request."
     :error (cl-function
             (lambda (&key error-thrown &allow-other-keys)
               (message "Error!: %S" error-thrown)))))
+
+(defun lyrics-fetcher--genius-maybe-edit-query (query edit)
+  "If EDIT is non-nil, edit QUERY if minibuffer."
+  (when edit
+    (read-from-minibuffer "Query: " query))
+  query)
 
 (defun lyrics-fetcher--genius-format-query (track)
   "Format track to genius.com query.
@@ -190,7 +205,7 @@ If SYNC is non-nil, the request will be performed synchronously."
      (lambda (&key error-thrown &allow-other-keys)
        (message "Error!: %S" error-thrown)))))
 
-(defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync)
+(defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync edit)
   "Downloads album cover of TRACK.
 
 Requires `lyrics-fetcher-genius-access-token' to be set and
@@ -209,7 +224,9 @@ The file will be saved to FOLDER and will be named
 
 CALLBACK will be called with a path to the resulting file.
 
-If SYNC is non-nil, the user will be prompted for a matching song."
+If SYNC is non-nil, the user will be prompted for a matching song.
+
+When EDIT is non-nil, edit the query in minibuffer before search."
   (lyrics-fetcher--genius-do-query
    track
    (lambda (data)
@@ -217,7 +234,8 @@ If SYNC is non-nil, the user will be prompted for a matching song."
       (lyrics-fetcher--genius-get-data-from-response data 'id sync)
       callback
       folder))
-   sync))
+   sync
+   edit))
 
 (defun lyrics-fetcher--genius-save-album-picture (id callback folder)
   "Save an album cover of a song of a given ID.

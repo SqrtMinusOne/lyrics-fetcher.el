@@ -40,6 +40,8 @@ Available commands:
   If called with =C-u=, then tries to fetch the text regardless of the latter.
 
   If called with =C-u C-u=, prompts the user to select a matching song. That is helpful when there are multiple songs with similar names, and the top one isn't the right one.
+
+  If called with =C-u C-u C-u=, edit the search query in minibuffer before sending. This is helpful when there is extra information in the song title which prevents the API from finding the song.
 - ~M-x lyrics-fetcher-show-lyrics-query~ - fetch lyrics by a text query.
 
   Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.

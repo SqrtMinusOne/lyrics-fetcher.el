@@ -153,7 +153,7 @@ The function has to take into account that:
               (substring title 0 (min (length title) 190))))))
 
 ;;;###autoload
-(cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open suppress-switch callback force-fetch sync)
+(cl-defun lyrics-fetcher-show-lyrics (&optional track &key suppress-open suppress-switch callback force-fetch sync edit)
   "Show lyrics for TRACK.
 
 TRACK can be either a string or an EMMS alist.  If TRACK is not
@@ -184,7 +184,13 @@ always refetch the lyrics text.
 If called with \\[universal-argument] \\[universal-argument] or SYNC
 is non-nil, then ask the user to select a matching song.  This may be
 useful if there are multiple tracks with similar names, and the top
-one isn’t the one required."
+one isn’t the one required.
+
+If called with \\[universal-argument] \\[universal-argument]
+\\[universal-argument] or EDIT is non-nil, edit the search query
+in minibuffer before sending.  This is helpful when there is
+extra information in the song title which prevents the API from
+finding the song."
   (interactive)
   (unless track
     (setq track (funcall lyrics-fetcher-current-track-method)))
@@ -196,8 +202,9 @@ one isn’t the one required."
         ;; and via recursion in asyncronous callbacks, during with
         ;; `current-prefix-arg' will be unset. So this is necessary
         ;; to pass the behavior down the recursive calls.
-        (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
-        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+        (force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16 64))))
+        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16 64))))
+        (edit (or edit (member (prefix-numeric-value current-prefix-arg) '(64)))))
     (if (and (not force-fetch) (lyrics-fetcher--lyrics-saved-p file-name))
         (progn
           (message "Found fetched lyrics for: %s" song-name)
@@ -213,7 +220,8 @@ one isn’t the one required."
            (lyrics-fetcher--open-lyrics file-name track suppress-switch))
          (when callback
            (funcall callback file-name)))
-       sync))))
+       sync
+       edit))))
 
 ;;;###autoload
 (defun lyrics-fetcher-show-lyrics-query (query)
@@ -226,18 +234,19 @@ See `lyrics-fetcher-show-lyrics' for behavior."
   (interactive "sEnter query: ")
   (lyrics-fetcher-show-lyrics query))
 
-(cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync)
+(cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync edit)
   "Fetch lyrics for every track in the TRACKS list.
 
 This function calls itself recursively.  START is an indicator of
 position in the list.
 
-FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
+FORCE-FETCH, SYNC and EDIT are passed to `lyrics-fetcher-show-lyrics'."
   (unless start
     (setq start 0))
   (message "Fetching lyrics for %s / %s songs" start (+ start (length tracks)))
-  (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
-        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+  (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16 64))))
+        (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16 64))))
+        (edit (or edit (member (prefix-numeric-value current-prefix-arg) '(64)))))
     (unless (seq-empty-p tracks)
       (lyrics-fetcher-show-lyrics
        (car tracks)
@@ -248,7 +257,8 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher-show-lyrics'."
           (cdr tracks)
           :start (+ start 1)
           :force-fetch force-fetch
-          :sync sync))))))
+          :sync sync
+          :edit edit))))))
 
 ;;; EMMS integration
 
@@ -417,20 +427,21 @@ the same way as `lyrics-fetcher-show-lyrics'."
   (read-only-mode 1))
 
 ;;; Album cover fetching
-(cl-defun lyrics-fetcher--fetch-cover-many (tracks &optional &key start force-fetch sync)
+(cl-defun lyrics-fetcher--fetch-cover-many (tracks &optional &key start force-fetch sync edit)
   "Fetch album covers for every track in the TRACKS list.
 
 This functions calls itself recursively.  START is an indicator of
 position in the list.
 
-FORCE-FETCH and SYNC are passed to `lyrics-fetcher--fetch-cover'."
+FORCE-FETCH, SYNC and EDIT are passed to `lyrics-fetcher--fetch-cover'."
   (unless start
     (setq start 0))
   (message "Fetching covers for %s / %s albums" start (+ start (length tracks)))
   (if (seq-empty-p tracks)
       (message "Done. Refresh EMMS browser to see the result.")
-    (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16))))
-          (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16)))))
+    (let ((force-fetch (or force-fetch (member (prefix-numeric-value current-prefix-arg) '(4 16 64))))
+          (sync (or sync (member (prefix-numeric-value current-prefix-arg) '(16 64))))
+          (edit (or sync (member (prefix-numeric-value current-prefix-arg) '(64)))))
       (lyrics-fetcher--fetch-cover
        (car tracks)
        :callback
@@ -439,11 +450,13 @@ FORCE-FETCH and SYNC are passed to `lyrics-fetcher--fetch-cover'."
           (cdr tracks)
           :start (+ start 1)
           :force-fetch force-fetch
-          :sync sync))
+          :sync sync
+          :edit edit))
        :sync sync
-       :force-fetch force-fetch))))
+       :force-fetch force-fetch
+       :edit edit))))
 
-(cl-defun lyrics-fetcher--fetch-cover (track &optional &key callback sync force-fetch)
+(cl-defun lyrics-fetcher--fetch-cover (track &optional &key callback sync force-fetch edit)
   "Fetch cover for a given TRACK.
 
 Call CALLBACK with the resulting filename of full cover.
@@ -451,7 +464,9 @@ Call CALLBACK with the resulting filename of full cover.
 If SYNC is non-nil, prompt the user for a matching track.
 
 If FORCE-FETCH is non-nil, always fetch regardless of whether the
-file exists."
+file exists.
+
+If EDIT is non-nil, edit the query in minibuffer before search."
   (let ((cover-found (lyrics-fetcher--get-cover-in-directory
                       (f-dirname (cdr (assoc 'name track))))))
     (if (and (not force-fetch) cover-found)
@@ -468,7 +483,8 @@ file exists."
                  (when callback
                    (funcall callback filename)))
                (concat (f-dirname (cdr (assoc 'name track))) "/")
-               sync))))
+               sync
+               edit))))
 
 (defun lyrics-fetcher--get-cover-in-directory (dirname)
   "Get a path to the large cover file in DIRNAME if one exists."
