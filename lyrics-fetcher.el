@@ -1,4 +1,4 @@
-;;; lyrics-fetcher.el --- fetch song lyrics and album covers -*- lexical-binding: t -*-
+;;; lyrics-fetcher.el --- Fetch song lyrics and album covers -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
 
@@ -35,7 +35,8 @@
 
 (defgroup lyrics-fetcher ()
   "Fetch song and album covers."
-  :link '(url-link :tag "GitHub" "https://github.com/SqrtMinusOne/lyrics-fetcher.el"))
+  :link '(url-link :tag "GitHub" "https://github.com/SqrtMinusOne/lyrics-fetcher.el")
+  :group 'multimedia)
 
 (defcustom lyrics-fetcher-fetch-method
   'lyrics-fetcher-genius-do-search
@@ -73,7 +74,7 @@ EMMS-like alist, which has to have the following fields:
   :type 'string)
 
 (defcustom lyrics-fetcher-format-song-name-method
-  'lyrics-fetcher-format-song-name
+  #'lyrics-fetcher-format-song-name
   "A function to format song name to a human-readable format.
 
 Has to receive either a string or EMMS alist.  Take a look at
@@ -82,7 +83,7 @@ Has to receive either a string or EMMS alist.  Take a look at
   :group 'lyrics-fetcher)
 
 (defcustom lyrics-fetcher-format-file-name-method
-  'lyrics-fetcher-format-file-name
+  #'lyrics-fetcher-format-file-name
   "A function to format a song name to a valid filename.
 
 Has to receive either a string or EMMS alist.  Take a look at
@@ -91,7 +92,7 @@ Has to receive either a string or EMMS alist.  Take a look at
   :group 'lyrics-fetcher)
 
 (defcustom lyrics-fetcher-download-cover-method
-  'lyrics-fetcher-genius-download-cover
+  #'lyrics-fetcher-genius-download-cover
   "A function to perform downloading album cover.
 
 As of now, genius.com is the only one available."
@@ -324,7 +325,7 @@ same way as `lyrics-fetcher-show-lyrics'."
 
 ;;;###autoload
 (defun lyrics-fetcher-emms-browser-open-large-cover-at-point ()
-  "Open large_cover for the current point in EMMS browser."
+  "Open cover_large for the current point in EMMS browser."
   (interactive)
   (let ((tracks (lyrics-fetcher--emms-extract-albums (emms-browser-bdata-at-point))))
     (when (seq-empty-p tracks)
