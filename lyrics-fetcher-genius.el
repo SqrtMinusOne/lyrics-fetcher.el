@@ -32,6 +32,7 @@
 (require 'seq)
 (require 'shr)
 (require 'f)
+(require 'dom)
 
 (defcustom lyrics-fetcher-genius-access-token nil
   "Genius access token.  Get one at https://genius.com."
@@ -176,6 +177,43 @@ first song."
              results-songs-for-select)))
        (assoc key (assoc 'result (car results-songs)))))))
 
+(defun lyrics-fetcher-genius--dom-print (dom &optional pretty xml)
+  (let ((column (current-column)))
+    (insert (format "<%s" (dom-tag dom)))
+    (let ((attr (dom-attributes dom)))
+      (dolist (elem attr)
+        (if (and (memq (car elem)
+                       '(async autofocus autoplay checked
+                               contenteditable controls default
+                               defer disabled formNoValidate frameborder
+                               hidden ismap itemscope loop
+                               multiple muted nomodule novalidate open
+                               readonly required reversed
+                               scoped selected typemustmatch))
+                 (cdr elem)
+                 (not xml))
+            (insert (format " %s" (car elem)))
+          (insert (format " %s=%S" (car elem) (cdr elem))))))
+    (let* ((children (dom-children dom))
+           (non-text nil))
+      (if (null children)
+          (insert " />")
+        (insert ">")
+        (dolist (child children)
+          (if (stringp child)
+              (insert child)
+            (setq non-text t)
+            (when pretty
+              (insert "\n" (make-string (+ column 2) ? )))
+            (dom-print child pretty xml)))
+        (when (and pretty
+                   (or (bolp)
+                       non-text))
+          (unless (bolp)
+            (insert "\n"))
+          (insert (make-string column ? )))
+        (insert (format "</%s>" (dom-tag dom)))))))
+
 (defun lyrics-fetcher-genius--fetch-lyrics (url callback &optional sync)
   "Fetch lyrics from genius.com page at URL and call CALLBACK with the result.
 
@@ -191,7 +229,7 @@ If SYNC is non-nil, the request will be performed synchronously."
                                (libxml-parse-html-region (point-min) (point-max))))
                        (lyrics-div (dom-by-class html (rx bos "lyrics" eos))))
                   (with-temp-buffer
-                    (dom-print lyrics-div)
+                    (lyrics-fetcher-genius--dom-print lyrics-div)
                     (shr-render-region (point-min) (point-max))
                     (funcall callback
                              (buffer-substring-no-properties
