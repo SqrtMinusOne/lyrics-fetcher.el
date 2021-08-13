@@ -32,6 +32,7 @@
 (require 'lyrics-fetcher-genius)
 (require 'f)
 (require 'emms)
+(require 'emms-browser)
 
 (defgroup lyrics-fetcher ()
   "Fetch song and album covers."
@@ -113,6 +114,8 @@ As of now, genius.com is the only one available."
 
 (defvar lyrics-fetcher-current-track-method
   "Current track in the lyrics view buffer")
+
+(defvar lyrics-fetcher-current-track)
 
 ;;; Actual lyrics fetching
 (defun lyrics-fetcher-format-song-name (track)

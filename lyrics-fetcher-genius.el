@@ -151,7 +151,7 @@ contains `info-albumartist' or `info-artist' and `info-title'"
 If ASK is non-nil, prompt the user for a choice, otherwise select the
 first song."
   (when (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
-    (error "Error: %" (cdr (assoc 'message (assoc 'meta data)))))
+    (error "Error: %s" (cdr (assoc 'message (assoc 'meta data)))))
   (let* ((results (cdr (assoc 'hits (assoc 'response data))))
          (results-songs (seq-filter
                          (lambda (entry)
@@ -260,7 +260,7 @@ to FOLDER and will be name \"cover_full.<extension>\".
 
 CALLBACK will be called with the path to the resulting file."
   (when (not (= (cdr (assoc 'status (assoc 'meta data))) 200))
-    (error "Error: %" (cdr (assoc 'message (assoc 'meta data)))))
+    (error "Error: %s" (cdr (assoc 'message (assoc 'meta data)))))
   (let ((url (cdr
               (assoc 'cover_art_url
                      (assoc 'album
