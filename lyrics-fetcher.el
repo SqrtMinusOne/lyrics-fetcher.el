@@ -4,7 +4,7 @@
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
-;; Version: 0.1.1
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "27") (emms "7.5") (f "0.20.0") (request "0.3.2"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
 
@@ -112,10 +112,8 @@ As of now, genius.com is the only one available."
   :type 'string
   :group 'lyrics-fetcher)
 
-(defvar lyrics-fetcher-current-track-method
+(defvar lyrics-fetcher-current-track
   "Current track in the lyrics view buffer")
-
-(defvar lyrics-fetcher-current-track)
 
 ;;; Actual lyrics fetching
 (defun lyrics-fetcher-format-song-name (track)
