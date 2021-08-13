@@ -1,6 +1,8 @@
 ;;; lyrics-fetcher-genius.el --- Fetch lyrics from genius.com -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2021 Syohei YOSHIDA
+;; Copyright (C) 2014-2021 Free Software Foundation, Inc.
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
@@ -178,6 +180,13 @@ first song."
        (assoc key (assoc 'result (car results-songs)))))))
 
 (defun lyrics-fetcher-genius--dom-print (dom &optional pretty xml)
+  "Print DOM at point as HTML/XML.
+
+If PRETTY, indent the HTML/XML logically.  If XML, generate XML
+instead of HTML.
+
+This function was copied from Emacs 28.1 to ensure the backward
+compatibilty with Emacs 27."
   (let ((column (current-column)))
     (insert (format "<%s" (dom-tag dom)))
     (let ((attr (dom-attributes dom)))
