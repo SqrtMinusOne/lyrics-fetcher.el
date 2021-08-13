@@ -1,6 +1,7 @@
 ;;; lyrics-fetcher.el --- Fetch song lyrics and album covers -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2021 Syohei YOSHIDA
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
