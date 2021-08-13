@@ -214,7 +214,7 @@ compatibilty with Emacs 27."
             (setq non-text t)
             (when pretty
               (insert "\n" (make-string (+ column 2) ? )))
-            (dom-print child pretty xml)))
+            (lyrics-fetcher-genius--dom-print child pretty xml)))
         (when (and pretty
                    (or (bolp)
                        non-text))
