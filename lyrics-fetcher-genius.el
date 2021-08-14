@@ -236,6 +236,9 @@ If SYNC is non-nil, the request will be performed synchronously."
                 (let* ((html (with-temp-buffer
                                (insert data)
                                (libxml-parse-html-region (point-min) (point-max))))
+                       ;; Apparently, Genius can give different
+                       ;; responses to different people based on
+                       ;; cookies.
                        (lyrics-divs (or (dom-by-class html (rx bos "lyrics" eos))
                                         (dom-by-class html (rx bos "Lyrics__Container" (* nonl))))))
                   (funcall callback

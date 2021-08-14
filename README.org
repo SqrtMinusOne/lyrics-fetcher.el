@@ -94,3 +94,5 @@ The album cover fetching is similar. The corresponding function is set in ~lyric
 - =sync= - as above.
 
 The first argument is =track= because in EMMS all the required information is stored in tracks, and album data is deduced from tracks. So this package just takes a sample track in the album.
+* Troubleshooting
+I've noticed that Genius can give pages with different DOMs to different people. If you have an empty buffer instead of lyrics, please attach the =curl-cookie-jar= file to the issue. It usually resides in =.emacs.d/request=.
