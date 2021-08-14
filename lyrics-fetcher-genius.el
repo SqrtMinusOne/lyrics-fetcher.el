@@ -236,14 +236,19 @@ If SYNC is non-nil, the request will be performed synchronously."
                 (let* ((html (with-temp-buffer
                                (insert data)
                                (libxml-parse-html-region (point-min) (point-max))))
-                       (lyrics-div (dom-by-class html (rx bos "lyrics" eos))))
-                  (with-temp-buffer
-                    (lyrics-fetcher-genius--dom-print lyrics-div)
-                    (shr-render-region (point-min) (point-max))
-                    (funcall callback
-                             (buffer-substring-no-properties
-                              (point-min)
-                              (point-max)))))))
+                       (lyrics-divs (or (dom-by-class html (rx bos "lyrics" eos))
+                                        (dom-by-class html (rx bos "Lyrics__Container" (* nonl))))))
+                  (funcall callback
+                           (mapconcat
+                            (lambda (lyrics-div)
+                              (with-temp-buffer
+                                (lyrics-fetcher-genius--dom-print lyrics-div)
+                                (shr-render-region (point-min) (point-max))
+                                (buffer-substring-no-properties
+                                 (point-min)
+                                 (point-max))))
+                            lyrics-divs
+                            "\n")))))
     :error
     (cl-function
      (lambda (&key error-thrown &allow-other-keys)
