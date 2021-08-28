@@ -506,10 +506,11 @@ If EDIT is non-nil, edit the query in minibuffer before search."
 Requires imagemagick installed."
   (dolist (size `((,lyrics-fetcher-small-cover-size . "cover_small.")
                   (,lyrics-fetcher-medium-cover-size . "cover_med.")))
-    (shell-command-to-string
-     (format "convert \"%s\" -resize %s^ -gravity Center -extent %s \"%s\""
-             filename (car size) (car size)
-             (f-join (f-dirname filename) (concat (cdr size) (f-ext filename)))))))
+    (call-process
+     "convert" nil nil nil
+     filename "-resize" (concat (car size) "^")
+     "-gravity" "Center" "-extent" (car size)
+     (f-join (f-dirname filename) (concat (cdr size) (f-ext filename))))))
 
 (provide 'lyrics-fetcher)
 ;;; lyrics-fetcher.el ends here
