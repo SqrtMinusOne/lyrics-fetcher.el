@@ -1,5 +1,7 @@
 #+TITLE: lyrics-fetcher.el
 
+[[https://melpa.org/#/lyrics-fetcher][file:https://melpa.org/packages/lyrics-fetcher-badge.svg]]
+
 A package to fetch song lyrics and album covers. Integrates with EMMS.
 
 [[./img/screenshot.png]]
