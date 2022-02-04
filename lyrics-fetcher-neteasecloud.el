@@ -83,13 +83,12 @@ non-nil, the request will be performed synchronously."
     :parser 'json-read
     :sync sync
     :success (cl-function
-     (lambda (&key data &allow-other-keys)
-       (funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
+	      (lambda (&key data &allow-other-keys)
+		(funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
     :error
     (cl-function
      (lambda (&key error-thrown &allow-other-keys)
-       (message "Error!: %S" error-thrown)))
-    ))
+       (message "Error!: %S" error-thrown)))))
 
 (defun lyrics-fetcher-neteasecloud--do-query (track callback &optional sync edit)
   "Perform a song search on 'music.163.com'.
@@ -119,8 +118,7 @@ When EDIT is non-nil, edit the query in minibuffer before search."
                 (funcall callback data)))
     :error (cl-function
             (lambda (&key error-thrown &allow-other-keys)
-              (message "Error!: %S" error-thrown)))
-    ))
+              (message "Error!: %S" error-thrown)))))
 
 (defun lyrics-fetcher-neteasecloud--maybe-edit-query (query edit)
   "If EDIT is non-nil, edit QUERY in minibuffer."
@@ -175,15 +173,13 @@ first song."
 		  results-songs-for-select
 		  nil t)
 		 results-songs-for-select)))
-	   (assoc 'id (aref results 0))
-	   ))))))
+	   (assoc 'id (aref results 0))))))))
 
 (defun lyrics-fetcher-neteasecloud--format-song-title (entry)
   "Convert a 'music.163.com' search ENTRY to a string, which can be used in selection."
   (format "%s by %s"
 	  (cdr (assoc 'name entry))
-	  (cdr (assoc 'name (aref (alist-get 'artists entry) 0)))
-	  ))
+	  (cdr (assoc 'name (aref (alist-get 'artists entry) 0)))))
 
 (defun lyrics-fetcher-neteasecloud-format-file-name (track)
   "TRACK should be either a string or EMMS alist.
@@ -198,8 +194,7 @@ tracks' name except extensions."
       (emms-replace-regexp-in-string
        (concat "\\." (file-name-extension full-name) "\\'")
        ""
-       (file-name-nondirectory full-name))
-      )))
+       (file-name-nondirectory full-name)))))
 
 (defun lyrics-fetcher-neteasecloud-format-song-name (track)
   "Format TRACK to a human-readable form.
@@ -209,8 +204,7 @@ TRACK should be either a string or EMMS alist."
       track
     (format "%s %s"
 	    (cdr (assoc 'info-title track))
-            (cdr (assoc 'info-artist track))
-            )))
+            (cdr (assoc 'info-artist track)))))
 
 (provide 'lyrics-fetcher-neteasecloud)
 ;;; lyrics-fetcher-neteasecloud.el ends here
