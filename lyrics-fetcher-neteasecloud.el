@@ -60,8 +60,7 @@ user to pick the matching search result.
 
 When EDIT is non-nil, edit the query in minibuffer before search.
 Genius usually struggles to find song if there is extra
-information in the title.
-"
+information in the title."
   (lyrics-fetcher-neteasecloud--do-query
    track
    (lambda (data)
@@ -75,7 +74,9 @@ information in the title.
 (defun lyrics-fetcher-neteasecloud--fetch-lyrics (song-id callback &optional sync)
   "Fetch lyrics from 'music.163.com' page at URL and call CALLBACK with the result.
 
-If SYNC is non-nil, the request will be performed synchronously."
+SONG-ID is a sequence of number which indicates a song, it can be
+returned by 'lyrics-fetcher-neteasecloud--get-song-id' If SYNC is
+non-nil, the request will be performed synchronously."
   (message "Getting lyrics from NeteaseCloud API...")
   (request
     (format "http://music.163.com/api/song/lyric?id=%s&lv=1&kv=1&tv=-1" song-id)
@@ -185,7 +186,9 @@ first song."
 	  ))
 
 (defun lyrics-fetcher-neteasecloud-format-file-name (track)
-  "'Emms' requires lyrics files' name should be the same as their tracks' name except extensions"
+  "TRACK should be either a string or EMMS alist.
+'Emms' requires lyrics files' name should be the same as their
+tracks' name except extensions."
   (if (stringp track)
       (substring
        (lyrics-fetcher--prepare-string track)
