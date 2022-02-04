@@ -33,9 +33,6 @@
 (require 'cl-lib)
 (require 'json)
 (require 'seq)
-(require 'shr)
-(require 'f)
-(require 'dom)
 
 (defcustom lyrics-fetcher-neteasecloud-strip-parens-from-query t
   "Strip parens from the query.
