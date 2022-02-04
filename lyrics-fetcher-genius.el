@@ -113,9 +113,9 @@ When EDIT is non-nil, edit the query in minibuffer before search."
 
 (defun lyrics-fetcher-genius--maybe-edit-query (query edit)
   "If EDIT is non-nil, edit QUERY in minibuffer."
-  (when edit
-    (read-from-minibuffer "Query: " query))
-  query)
+  (if edit
+      (read-from-minibuffer "Query: " query)
+    query))
 
 (defun lyrics-fetcher-genius--format-query (track)
   "Format track to genius.com query.
