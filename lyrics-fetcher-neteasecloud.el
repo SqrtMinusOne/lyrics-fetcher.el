@@ -3,7 +3,6 @@
 ;; Copyright (C) 2021 Korytov Pavel
 ;; Copyright (C) 2021 Syohei YOSHIDA
 ;; Copyright (C) 2021 Eli Qian
-;; Copyright (C) 2014-2021 Free Software Foundation, Inc.
 
 ;; Author: Eli Qian <eli.q.qian@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>
