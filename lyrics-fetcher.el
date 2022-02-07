@@ -45,6 +45,7 @@
 
 ;;; Code:
 (require 'lyrics-fetcher-genius)
+(require 'lyrics-fetcher-neteasecloud)
 (require 'f)
 (require 'emms)
 (require 'emms-browser)
