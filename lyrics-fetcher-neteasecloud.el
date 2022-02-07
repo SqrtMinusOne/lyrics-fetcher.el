@@ -180,7 +180,9 @@ first song."
 	       (assoc 'id (aref results 0))))))))
 
 (defun lyrics-fetcher-neteasecloud--format-song-title (entry)
-  "Convert a 'music.163.com' search ENTRY to a string, which can be used in selection."
+  "Convert a 'music.163.com' search ENTRY to a string.
+
+That entry can then be used in selection"
   (format "%s by %s"
 	      (cdr (assoc 'name entry))
 	      (cdr (assoc 'name (aref (alist-get 'artists entry) 0)))))
