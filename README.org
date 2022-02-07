@@ -6,24 +6,19 @@ A package to fetch song lyrics and album covers. Integrates with EMMS.
 
 [[./img/screenshot.png]]
 
-As of now, the only available backend is [[https://genius.com/][genius.com]], but in principle, new ones can be added.
+The available backends are [[https://genius.com][genius.com]] and [[https://music.163.com/][music.163.com]].
 
 * Installation
-As the package isn't yet available anywhere but in this repository, you can clone the repository, add it to the =load-path= and =require= the package:
-#+begin_src emacs-lisp
-(require 'lyrics-fetcher)
-#+end_src
-
-My preferred way is to use =use-package= with =straight=:
+The package is available on MELPA. Install it however you normally install packages, I prefer =use-package= with =straight=:
 #+begin_src emacs-lisp
 (use-package lyrics-fetcher
-  :straight (:host github :repo "SqrtMinusOne/lyrics-fetcher.el")
+  :straight t
   :after (emms))
 #+end_src
 
 Install [[https://imagemagick.org/index.php][imagemagick]] if you want to download covers.
 
-Set [[https://docs.genius.com/][genius.com]] client access token. To do that, [[https://genius.com/api-clients/new][create a new client,]] click "Generate Access Token" and put the result to the =lyrics-fetcher-genius-access-token= variable. I do this with password-store:
+If you want to use the genius backend, you have to set [[https://docs.genius.com/][genius.com]] client access token. To do that, [[https://genius.com/api-clients/new][create a new client,]] click "Generate Access Token" and put the result to the =lyrics-fetcher-genius-access-token= variable. I do this with password-store:
 #+begin_src emacs-lisp
 (setq lyrics-fetcher-genius-access-token
       (password-store-get "My_Online/APIs/genius.com"))
@@ -48,6 +43,8 @@ Available commands:
 
   Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.
 
+- ~M-x lyrics-fetcher-use-backend~ - select a backend to use.
+
 EMMS integration:
 - ~M-x lyrics-fetcher-emms-browser-show-at-point~ - fetch data for the current point in EMMS browser.
 
@@ -66,15 +63,30 @@ EMMS integration:
 
   Modified by =C-u= the same way as ~lyrics-fetcher-show-lyrics~.
 - ~M-x lyrics-fetcher-emms-browser-open-large-cover-at-point~ - open large_cover for the current point in EMMS browser.
+- ~M-x lyrics-fetcher-lyrics-catchup~ - feed the LRC file for the current track to EMMS.
 
 Lyric view mode keybindings:
 - =q= - close the lyrics buffer
 - =r= - refetch the lyrics in the buffer
+* Available backends
+As of now, the available backends are =genius= and =neteasecloud= (thanks [[https://github.com/Elilif][@Elilif]]). Backends can be switched with ~M-x lyrics-fetcher-use-backend~, or from the Lisp code:
+#+begin_src emacs-lisp
+(lyrics-fetcher-use-backend 'neteasecloud)
+#+end_src
+
+The =genius= backend fetches lyrics in a simple text format.
+
+=neteasecloud= fetches in the [[https://en.wikipedia.org/wiki/LRC_(file_format)][LRC]] format, which contains timestamps for each line of the lyrics text.
+
+LRC files can also be read by =emms-lyrics=. ~lyrics-fetcher-use-backend~ sets up =lyrics-fetcher= and EMMS variables so that EMMS could see the lyrics, downloaded by =lyrics-fetcher=. Running ~M-x emms-lyrics~ then should enable lyric display for newly played tracks, or you can run ~M-x lyrics-fetcher-lyrics-catchup~ to manually feed the current LRC file to EMMS.
+
 * Customization and extension
 ** Lyrics file naming and location
 As was outlined above, lyrics files are saved to ~lyrics-fetcher-lyrics-folder~ and have an extension set in ~lyrics-fetcher-lyrics-file-extension~.
 
 Take a look at the ~lyrics-fetcher-format-song-name-method~ and ~lyrics-fetcher-format-file-name-method~ variables if you want to customize the lyrics buffer and file naming.
+
+Also note that integration with =emms-lyrics= requires these variables to be set with =lyrics-fetcher-use-backend=
 ** Using another player than EMMS
 To use another player, customize ~lyrics-fetcher-current-track-method~.
 
