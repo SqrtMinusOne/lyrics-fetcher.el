@@ -28,12 +28,13 @@
 ;; Fetch song lyrics from genius.com.
 
 ;;; Code:
-(require 'lyrics-fetcher)
 (require 'emms)
 (require 'request)
 (require 'cl-lib)
 (require 'json)
 (require 'seq)
+
+(declare-function lyrics-fetcher--prepare-string "lyrics-fetcher")
 
 (defcustom lyrics-fetcher-neteasecloud-strip-parens-from-query t
   "Strip parens from the query.
