@@ -261,7 +261,8 @@ See `lyrics-fetcher-show-lyrics' for behavior."
 (defun lyrics-fetcher-use-backend (backend)
   "Select a backend to use with lyrics-fetcher.
 
-As of now, the supported backends are:
+BACKEND is a symbol that corresponds to the required backend.  As of
+now, the supported ones are:
 - `genius'
 - `neteasecloud'
 
