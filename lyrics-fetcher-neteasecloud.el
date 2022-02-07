@@ -28,6 +28,8 @@
 ;; Fetch song lyrics from genius.com.
 
 ;;; Code:
+(require 'lyrics-fetcher)
+(require 'emms)
 (require 'request)
 (require 'cl-lib)
 (require 'json)
@@ -71,7 +73,9 @@ information in the title."
    edit))
 
 (defun lyrics-fetcher-neteasecloud--fetch-lyrics (song-id callback &optional sync)
-  "Fetch lyrics from 'music.163.com' page at URL and call CALLBACK with the result.
+  "Fetch lyrics from 'music.163.com' page at URL.
+
+CALLBACK is called with the result.
 
 SONG-ID is a sequence of number which indicates a song, it can be
 returned by 'lyrics-fetcher-neteasecloud--get-song-id' If SYNC is
@@ -82,8 +86,8 @@ non-nil, the request will be performed synchronously."
     :parser 'json-read
     :sync sync
     :success (cl-function
-	      (lambda (&key data &allow-other-keys)
-		(funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
+	          (lambda (&key data &allow-other-keys)
+		        (funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
     :error
     (cl-function
      (lambda (&key error-thrown &allow-other-keys)
@@ -105,11 +109,11 @@ When EDIT is non-nil, edit the query in minibuffer before search."
   (request "http://music.163.com/api/search/get/"
     :type "POST"
     :data `(("s" . ,(lyrics-fetcher-neteasecloud--maybe-edit-query
-		     (lyrics-fetcher-neteasecloud--format-query track)
-		     edit))
-	    ("limit" . "10")
-	    ("type" . "1")
-	    ("offset" . "0"))
+		             (lyrics-fetcher-neteasecloud--format-query track)
+		             edit))
+	        ("limit" . "10")
+	        ("type" . "1")
+	        ("offset" . "0"))
     :parser 'json-read
     :sync sync
     :success (cl-function
@@ -137,9 +141,9 @@ contains `info-artist' or `info-title'"
   (if (stringp track)
       track
     (let ((query (concat
-		  (cdr (assoc 'info-title track))
+		          (cdr (assoc 'info-title track))
                   " "
-		  (cdr (assoc 'info-artist track)))))
+		          (cdr (assoc 'info-artist track)))))
       (when lyrics-fetcher-neteasecloud-strip-parens-from-query
         (setq query (replace-regexp-in-string
                      (rx (or (: "(" (* nonl) ")")
@@ -156,29 +160,29 @@ first song."
       (error "ERROR: %s" (alist-get 'code data))
     (let* ((results (alist-get 'songs (alist-get 'result data))))
       (if (seq-empty-p results)
-	  (error "ERROR: no results!")
-	(cdr
-	 (if ask
-	     (let ((results-songs-for-select
-		    (mapcar
-		     (lambda (entry)
-		       (cons (lyrics-fetcher-neteasecloud--format-song-title entry)
-			     (assoc 'id entry)))
-		     results)))
-	       (cdr
-		(assoc
-		 (completing-read
-		  "Pick a result: "
-		  results-songs-for-select
-		  nil t)
-		 results-songs-for-select)))
-	   (assoc 'id (aref results 0))))))))
+	      (error "ERROR: no results!")
+	    (cdr
+	     (if ask
+	         (let ((results-songs-for-select
+		            (mapcar
+		             (lambda (entry)
+		               (cons (lyrics-fetcher-neteasecloud--format-song-title entry)
+			                 (assoc 'id entry)))
+		             results)))
+	           (cdr
+		        (assoc
+		         (completing-read
+		          "Pick a result: "
+		          results-songs-for-select
+		          nil t)
+		         results-songs-for-select)))
+	       (assoc 'id (aref results 0))))))))
 
 (defun lyrics-fetcher-neteasecloud--format-song-title (entry)
   "Convert a 'music.163.com' search ENTRY to a string, which can be used in selection."
   (format "%s by %s"
-	  (cdr (assoc 'name entry))
-	  (cdr (assoc 'name (aref (alist-get 'artists entry) 0)))))
+	      (cdr (assoc 'name entry))
+	      (cdr (assoc 'name (aref (alist-get 'artists entry) 0)))))
 
 (defun lyrics-fetcher-neteasecloud-format-file-name (track)
   "TRACK should be either a string or EMMS alist.
@@ -202,7 +206,7 @@ TRACK should be either a string or EMMS alist."
   (if (stringp track)
       track
     (format "%s %s"
-	    (cdr (assoc 'info-title track))
+	        (cdr (assoc 'info-title track))
             (cdr (assoc 'info-artist track)))))
 
 (provide 'lyrics-fetcher-neteasecloud)
