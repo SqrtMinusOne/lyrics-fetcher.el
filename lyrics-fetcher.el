@@ -35,9 +35,10 @@
 ;; - `lyrics-fetcher-show-lyrics-query' - show lyrics by a
 ;;    text query.
 ;; - `lyrics-fetcher-emms-browser-show-at-point' - show lyrics
-;;    for the current point in EMMS browser,
+;;    for the current point in EMMS browser.
 ;; - `lyrics-fetcher-emms-browser-fetch-covers-at-point' - fetch
 ;;    album covers for the current point in the EMMS browser.
+;; - `lyrics-fetcher-use-backend' - select a backend.
 ;;
 ;; Take a look at the package README.org at
 ;; <https://github.com/SqrtMinusOne/lyrics-fetcher.el> for more
@@ -49,6 +50,7 @@
 (require 'f)
 (require 'emms)
 (require 'emms-browser)
+(require 'emms-lyrics)
 
 (defgroup lyrics-fetcher ()
   "Fetch song and album covers."
@@ -254,6 +256,51 @@ e.g. \"Queen Show Must Go On\".
 See `lyrics-fetcher-show-lyrics' for behavior."
   (interactive "sEnter query: ")
   (lyrics-fetcher-show-lyrics query))
+
+;;;###autoload
+(defun lyrics-fetcher-use-backend (backend)
+  "Select a backend to use with lyrics-fetcher.
+
+As of now, the supported backends are:
+- `genius'
+- `neteasecloud'
+
+`genius' fetches lyrics in a text format, more suitable for
+viewing in a text buffer.
+
+`neteasecloud' fetches in the LRC format, which contains
+timestamps for every line in the lyric text.  This function also
+sets up EMMS variables so that the default
+`emms-lyrics-find-lyric-function' could find lyrics."
+  (interactive
+   (list (intern
+          (completing-read "Select backend: " '("genius" "neteasecloud")
+                           nil t))))
+  (pcase backend
+    ('genius
+     (setq lyrics-fetcher-fetch-method #'lyrics-fetcher-genius-do-search
+           lyrics-fetcher-format-file-name-method #'lyrics-fetcher-format-file-name
+           lyrics-fetcher-format-song-name-method #'lyrics-fetcher-format-song-name
+           lyrics-fetcher-lyrics-file-extension ".txt"))
+    ('neteasecloud
+     (setq lyrics-fetcher-fetch-method #'lyrics-fetcher-neteasecloud-do-search
+           lyrics-fetcher-format-file-name-method #'lyrics-fetcher-neteasecloud-format-file-name
+           lyrics-fetcher-format-song-name-method #'lyrics-fetcher-neteasecloud-format-song-name
+           lyrics-fetcher-lyrics-file-extension ".lrc"
+           emms-lyrics-dir lyrics-fetcher-lyrics-folder))
+    (_ (user-error "Backend %s not found" (symbol-name backend)))))
+
+(defun lyrics-fetcher-lyrics-catchup ()
+  "Feed the LRC file for the current track to EMMS."
+  (interactive)
+  (let* ((track (emms-playlist-current-selected-track))
+	     (name (emms-track-get track 'name))
+	     (lrc (funcall emms-lyrics-find-lyric-function
+			           (emms-replace-regexp-in-string
+			            (concat "\\." (file-name-extension name) "\\'")
+			            ".lrc"
+			            (file-name-nondirectory name)))))
+    (emms-lyrics-catchup lrc)))
 
 (cl-defun lyrics-fetcher--fetch-many (tracks &optional &key start force-fetch sync edit)
   "Fetch lyrics for every track in the TRACKS list.
