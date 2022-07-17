@@ -73,8 +73,7 @@ return all the entries in the region."
              (-
               (line-number-at-pos (region-end))
               (line-number-at-pos (region-beginning)))
-           1))
-        (first-new-track (with-current-emms-playlist (point-max))))
+           1)))
     (save-excursion
       (when (use-region-p)
         (goto-char (region-beginning)))
@@ -100,7 +99,7 @@ where the key is the path and the value is the path to the file."
                          (lyrics-fetcher--process-filename file-name) hash)
               (message "No lyrics fetched for %s"
                        (funcall lyrics-fetcher-format-song-name-method maybe-track))))
-        (lyrics-fetcher-analyze--get-lyrics-by-name (alist-get 'data bdatum) hash))))
+        (lyrics-fetcher-analyze--get-lyrics-paths (alist-get 'data bdatum) hash))))
   hash)
 
 (defun lyrics-fetcher-analyze--get-entiries-recursive (bdata level lyrics-paths)
@@ -271,4 +270,6 @@ language other than English."
           (goto-char (point-max))
           (lyrics-fetcher-analyze--lyrics-count-display data))))
     (switch-to-buffer-other-window lyrics-fetcher-analyze-lyrics-count-buffer-name)))
+
+(provide 'lyrics-fetcher-analyze)
 ;;; lyrics-fetcher-analyze.el ends here
