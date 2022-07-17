@@ -1,8 +1,8 @@
 ;;; lyrics-fetcher-neteasecloud.el --- Fetch lyrics from music.163.com -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2022 Korytov Pavel
+;; Copyright (C) 2022 Eli Qian
 ;; Copyright (C) 2021 Syohei YOSHIDA
-;; Copyright (C) 2021 Eli Qian
 
 ;; Author: Eli Qian <eli.q.qian@gmail.com>
 ;; Maintainer: Korytov Pavel <thexcloud@gmail.com>

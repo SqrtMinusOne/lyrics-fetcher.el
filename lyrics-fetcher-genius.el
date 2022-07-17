@@ -1,6 +1,6 @@
 ;;; lyrics-fetcher-genius.el --- Fetch lyrics from genius.com -*- lexical-binding: t -*-
 
-;; Copyright (C) 2021 Korytov Pavel
+;; Copyright (C) 2022 Korytov Pavel
 ;; Copyright (C) 2021 Syohei YOSHIDA
 ;; Copyright (C) 2014-2021 Free Software Foundation, Inc.
 
