@@ -87,7 +87,7 @@ As was outlined above, lyrics files are saved to ~lyrics-fetcher-lyrics-folder~ 
 Take a look at the ~lyrics-fetcher-format-song-name-method~ and ~lyrics-fetcher-format-file-name-method~ variables if you want to customize the lyrics buffer and file naming.
 
 Also note that integration with =emms-lyrics= requires these variables to be set with =lyrics-fetcher-use-backend=
-** Using another player than EMMS
+** Using other player than EMMS
 To use another player, customize ~lyrics-fetcher-current-track-method~.
 
 This variable contains a function that returns the current playing track. The return format has to be either a string or (recommended) an EMMS-like alist, which has to have the following fields:
