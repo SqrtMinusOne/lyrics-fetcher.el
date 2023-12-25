@@ -8,7 +8,7 @@
 ;; Version: 0.2.0
 ;; Package-Requires: ((emacs "27") (emms "7.5") (f "0.20.0") (request "0.3.2"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
-;; Published-At: 2021-14-12
+;; Published-At: 2021-12-14
 
 ;; This file is NOT part of GNU Emacs.
 
