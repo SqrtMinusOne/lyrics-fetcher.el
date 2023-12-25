@@ -1,6 +1,6 @@
 ;;; lyrics-fetcher.el --- Fetch song lyrics and album covers -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Korytov Pavel
+;; Copyright (C) 2022, 2023 Korytov Pavel
 ;; Copyright (C) 2021 Syohei YOSHIDA
 
 ;; Author: Korytov Pavel <thexcloud@gmail.com>
@@ -8,6 +8,7 @@
 ;; Version: 0.2.0
 ;; Package-Requires: ((emacs "27") (emms "7.5") (f "0.20.0") (request "0.3.2"))
 ;; Homepage: https://github.com/SqrtMinusOne/lyrics-fetcher.el
+;; Published-At: 2021-14-12
 
 ;; This file is NOT part of GNU Emacs.
 

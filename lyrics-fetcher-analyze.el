@@ -1,6 +1,6 @@
 ;;; lyrics-fetcher-analyze.el --- Fetch lyrics from music.163.com -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Korytov Pavel
+;; Copyright (C) 2022, 2023 Korytov Pavel
 ;; Copyright (C) 2022 Eli Qian
 ;; Copyright (C) 2021 Syohei YOSHIDA
 
