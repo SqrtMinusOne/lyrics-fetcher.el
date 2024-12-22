@@ -240,7 +240,8 @@ If SYNC is non-nil, the request will be performed synchronously."
                        ;; responses to different people based on
                        ;; cookies.
                        (lyrics-divs (or (dom-by-class html (rx bos "lyrics" eos))
-                                        (dom-by-class html (rx bos "Lyrics__Container" (* nonl))))))
+                                        (dom-by-class html (rx bos "Lyrics__Container" (* nonl)))
+                                        (dom-by-class html (rx bos "Lyrics-sc" (* nonl))) )))
                   (funcall callback
                            (mapconcat
                             (lambda (lyrics-div)
