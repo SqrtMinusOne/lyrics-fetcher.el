@@ -6,7 +6,9 @@ A package to fetch song lyrics and album covers. Integrates with EMMS.
 
 [[./img/screenshot.png]]
 
-The available backends are [[https://genius.com][genius.com]] and [[https://music.163.com/][music.163.com]].
+The available backends are [[https://lrclib.net/][lrclib.net]] and [[https://music.163.com/][music.163.com]].
+
+[[https://genius.com/][genius.com]] is also available to fetch album covers, but fetching lyrics has stopped working after November 2026 because of cloudflare.
 
 * Installation
 The package is available on MELPA. Install it however you normally install packages, I prefer =use-package= with =straight=:
@@ -71,14 +73,16 @@ Lyric view mode keybindings:
 - =q= - close the lyrics buffer
 - =r= - refetch the lyrics in the buffer
 * Available backends
-As of now, the available backends are =genius= and =neteasecloud= (thanks [[https://github.com/Elilif][@Elilif]]). Backends can be switched with ~M-x lyrics-fetcher-use-backend~, or from the Lisp code:
+As of now, the available backends are =lrclib=, =genius= and =neteasecloud= (thanks [[https://github.com/Elilif][@Elilif]]). Backends can be switched with ~M-x lyrics-fetcher-use-backend~, or from the Lisp code:
 #+begin_src emacs-lisp
 (lyrics-fetcher-use-backend 'neteasecloud)
 #+end_src
 
-The =genius= backend fetches lyrics in a simple text format.
+=genius= and =lrclib= fetch lyrics in a simple text format.
 
 =neteasecloud= fetches in the [[https://en.wikipedia.org/wiki/LRC_(file_format)][LRC]] format, which contains timestamps for each line of the lyrics text.
+
+=lrclib= also supports LRC, but I haven't implemented that yet.
 
 LRC files can also be read by =emms-lyrics=. ~lyrics-fetcher-use-backend~ sets up =lyrics-fetcher= and EMMS variables so that EMMS could see the lyrics, downloaded by =lyrics-fetcher=. Running ~M-x emms-lyrics~ then should enable lyric display for newly played tracks, or you can run ~M-x lyrics-fetcher-lyrics-catchup~ to manually feed the current LRC file to EMMS.
 
