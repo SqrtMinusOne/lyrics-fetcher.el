@@ -48,6 +48,7 @@
 ;;; Code:
 (require 'lyrics-fetcher-genius)
 (require 'lyrics-fetcher-neteasecloud)
+(require 'lyrics-fetcher-lrclib)
 (require 'f)
 (require 'emms)
 (require 'emms-browser)
@@ -59,11 +60,14 @@
   :group 'multimedia)
 
 (defcustom lyrics-fetcher-fetch-method
-  'lyrics-fetcher-genius-do-search
+  'lyrics-fetcher-lrclib-do-search
   "A function to perform fetching.
 
-As of now, genius.com is the only one available, but this is a
-point of extensibility."
+The following options are currently available:
+- `lyrics-fetcher-lrclib-do-search' (uses lrclib.net)
+- `lyrics-fetcher-neteasecloud-do-search' (uses music.163.com)
+- `lyrics-fetcher-genius-do-search' (uses genius.com, doesn't work
+  anymore because of cloudflare)."
   :type 'function
   :options '(lyrics-fetcher-genius-do-search)
   :group 'lyrics-fetcher)
@@ -271,10 +275,11 @@ See `lyrics-fetcher-show-lyrics' for behavior."
 
 BACKEND is a symbol that corresponds to the required backend.  As of
 now, the supported ones are:
-- `genius'
+- `genius' (doesn't work because of cloudflare).
 - `neteasecloud'
+- `lrclib'
 
-`genius' fetches lyrics in a text format, more suitable for
+`genius' and 'lrclib' fetch lyrics in a text format, more suitable for
 viewing in a text buffer.
 
 `neteasecloud' fetches in the LRC format, which contains
@@ -283,11 +288,16 @@ sets up EMMS variables so that the default
 `emms-lyrics-find-lyric-function' could find lyrics."
   (interactive
    (list (intern
-          (completing-read "Select backend: " '("genius" "neteasecloud")
+          (completing-read "Select backend: " '("genius" "neteasecloud" "lrclib")
                            nil t))))
   (pcase backend
     ('genius
      (setq lyrics-fetcher-fetch-method #'lyrics-fetcher-genius-do-search
+           lyrics-fetcher-format-file-name-method #'lyrics-fetcher-format-file-name
+           lyrics-fetcher-format-song-name-method #'lyrics-fetcher-format-song-name
+           lyrics-fetcher-lyrics-file-extension ".txt"))
+    ('lrclib
+     (setq lyrics-fetcher-fetch-method #'lyrics-fetcher-lrclib-do-search
            lyrics-fetcher-format-file-name-method #'lyrics-fetcher-format-file-name
            lyrics-fetcher-format-song-name-method #'lyrics-fetcher-format-song-name
            lyrics-fetcher-lyrics-file-extension ".txt"))
