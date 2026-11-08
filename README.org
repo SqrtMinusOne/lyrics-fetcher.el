@@ -26,6 +26,8 @@ If you want to use the genius backend, you have to set [[https://docs.genius.com
 
 But of course, you can just hardcode the string.
 
+If you need a proxy, set =lyrics-fetcher-proxy=, and make sure =request= uses =curl= (see =request-backend=).
+
 * Usage
 Available commands:
 - ~M-x lyrics-fetcher-show-lyrics~ - show lyrics for the current playing track.

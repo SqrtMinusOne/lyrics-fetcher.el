@@ -93,6 +93,13 @@ EMMS-like alist, which has to have the following fields:
   :group 'lyrics-fetcher
   :type 'string)
 
+(defcustom lyrics-fetcher-proxy nil
+  "If non-nil, pass this to curl's --proxy parameter."
+  :type '(choice
+          (const :tag "No proxy" nil)
+          (string :tag "Value"))
+  :group 'biome)
+
 (defcustom lyrics-fetcher-format-song-name-method
   #'lyrics-fetcher-format-song-name
   "A function to format song name to a human-readable format.

@@ -34,6 +34,7 @@
 (require 'json)
 (require 'seq)
 
+(defvar lyrics-fetcher-proxy nil)
 (declare-function lyrics-fetcher--prepare-string "lyrics-fetcher")
 
 (defcustom lyrics-fetcher-neteasecloud-strip-parens-from-query t
@@ -45,7 +46,7 @@ searching \"Song (feat. Artist)\""
   :group 'lyrics-fetcher)
 
 (defun lyrics-fetcher-neteasecloud-do-search (track callback &optional sync edit)
-  "Perform a lyrics search on 'music.163.com'.
+  "Perform a lyrics search on \='music.163.com'.
 
 The flow is as follows:
 1. Send a POST /search request with a text query
@@ -74,28 +75,32 @@ information in the title."
    edit))
 
 (defun lyrics-fetcher-neteasecloud--fetch-lyrics (song-id callback &optional sync)
-  "Fetch lyrics from 'music.163.com' page at URL.
+  "Fetch lyrics from \='music.163.com' page at URL.
 
 CALLBACK is called with the result.
 
 SONG-ID is a sequence of number which indicates a song, it can be
-returned by 'lyrics-fetcher-neteasecloud--get-song-id' If SYNC is
+returned by `lyrics-fetcher-neteasecloud--get-song-id' If SYNC is
 non-nil, the request will be performed synchronously."
   (message "Getting lyrics from NeteaseCloud API...")
-  (request
-    (format "http://music.163.com/api/song/lyric?id=%s&lv=1&kv=1&tv=-1" song-id)
-    :parser 'json-read
-    :sync sync
-    :success (cl-function
-	          (lambda (&key data &allow-other-keys)
-		        (funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
-    :error
-    (cl-function
-     (lambda (&key error-thrown &allow-other-keys)
-       (message "Error!: %S" error-thrown)))))
+  (let ((request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
+    (request
+      (format "http://music.163.com/api/song/lyric?id=%s&lv=1&kv=1&tv=-1" song-id)
+      :parser 'json-read
+      :sync sync
+      :success (cl-function
+	            (lambda (&key data &allow-other-keys)
+		          (funcall callback (alist-get 'lyric (alist-get 'lrc data)))))
+      :error
+      (cl-function
+       (lambda (&key error-thrown &allow-other-keys)
+         (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher-neteasecloud--do-query (track callback &optional sync edit)
-  "Perform a song search on 'music.163.com'.
+  "Perform a song search on \='music.163.com'.
 
 TRACK should be EMMS-compatible alist or string, take a look at
 `lyrics-fetcher-neteasecloud--format-query'.  If the search is
@@ -107,22 +112,26 @@ after the request.
 
 When EDIT is non-nil, edit the query in minibuffer before search."
   (message "Sending a query to NeteaseCloud API...")
-  (request "http://music.163.com/api/search/get/"
-    :type "POST"
-    :data `(("s" . ,(lyrics-fetcher-neteasecloud--maybe-edit-query
-		             (lyrics-fetcher-neteasecloud--format-query track)
-		             edit))
-	        ("limit" . "10")
-	        ("type" . "1")
-	        ("offset" . "0"))
-    :parser 'json-read
-    :sync sync
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (funcall callback data)))
-    :error (cl-function
-            (lambda (&key error-thrown &allow-other-keys)
-              (message "Error!: %S" error-thrown)))))
+  (let ((request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
+    (request "http://music.163.com/api/search/get/"
+      :type "POST"
+      :data `(("s" . ,(lyrics-fetcher-neteasecloud--maybe-edit-query
+		               (lyrics-fetcher-neteasecloud--format-query track)
+		               edit))
+	          ("limit" . "10")
+	          ("type" . "1")
+	          ("offset" . "0"))
+      :parser 'json-read
+      :sync sync
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (funcall callback data)))
+      :error (cl-function
+              (lambda (&key error-thrown &allow-other-keys)
+                (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher-neteasecloud--maybe-edit-query (query edit)
   "If EDIT is non-nil, edit QUERY in minibuffer."
@@ -131,7 +140,7 @@ When EDIT is non-nil, edit the query in minibuffer before search."
     query))
 
 (defun lyrics-fetcher-neteasecloud--format-query (track)
-  "Format track to 'music.163.com' query.
+  "Format track to \='music.163.com' query.
 
 When `lyrics-fetcher-neteasecloud-strip-parens-from-query' is non-nil,
 remove all the text in parens from the query,
@@ -153,7 +162,7 @@ contains `info-artist' or `info-title'"
       query)))
 
 (defun lyrics-fetcher-neteasecloud--get-song-id (data &optional ask)
-  "Retrieve a song id from the 'music.163.com' response DATA.
+  "Retrieve a song id from the \='music.163.com' response DATA.
 
 If ASK is non-nil, prompt the user for a choice, otherwise select the
 first song."
@@ -180,7 +189,7 @@ first song."
 	       (assoc 'id (aref results 0))))))))
 
 (defun lyrics-fetcher-neteasecloud--format-song-title (entry)
-  "Convert a 'music.163.com' search ENTRY to a string.
+  "Convert a \='music.163.com' search ENTRY to a string.
 
 That entry can then be used in selection"
   (format "%s by %s"
@@ -189,7 +198,7 @@ That entry can then be used in selection"
 
 (defun lyrics-fetcher-neteasecloud-format-file-name (track)
   "TRACK should be either a string or EMMS alist.
-'Emms' requires lyrics files' name should be the same as their
+EMMS requires lyrics files' name should be the same as their
 tracks' name except extensions."
   (if (stringp track)
       (substring

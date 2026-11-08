@@ -36,6 +36,8 @@
 (require 'f)
 (require 'dom)
 
+(defvar lyrics-fetcher-proxy nil)
+
 (defcustom lyrics-fetcher-genius-access-token nil
   "Genius access token.  Get one at https://genius.com."
   :type '(string nil)
@@ -50,7 +52,7 @@ searching \"Song (feat. Artist)\""
   :group 'lyrics-fetcher)
 
 (defun lyrics-fetcher-genius-do-search (track callback &optional sync edit)
-  "Perform a lyrics search on 'genius.com'.
+  "Perform a lyrics search on \='genius.com'.
 
 Requires `lyrics-fetcher-genius-access-token' to be set.
 
@@ -97,19 +99,23 @@ When EDIT is non-nil, edit the query in minibuffer before search."
   (when (string-empty-p lyrics-fetcher-genius-access-token)
     (error "Genius client access token not set!"))
   (message "Sending a query to genius API...")
-  (request "https://api.genius.com/search"
-    :params `(("q" . ,(lyrics-fetcher-genius--maybe-edit-query
-                       (lyrics-fetcher-genius--format-query track)
-                       edit))
-              ("access_token" . ,lyrics-fetcher-genius-access-token))
-    :parser 'json-read
-    :sync sync
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (funcall callback data)))
-    :error (cl-function
-            (lambda (&key error-thrown &allow-other-keys)
-              (message "Error!: %S" error-thrown)))))
+  (let ((request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
+    (request "https://api.genius.com/search"
+      :params `(("q" . ,(lyrics-fetcher-genius--maybe-edit-query
+                         (lyrics-fetcher-genius--format-query track)
+                         edit))
+                ("access_token" . ,lyrics-fetcher-genius-access-token))
+      :parser 'json-read
+      :sync sync
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (funcall callback data)))
+      :error (cl-function
+              (lambda (&key error-thrown &allow-other-keys)
+                (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher-genius--maybe-edit-query (query edit)
   "If EDIT is non-nil, edit QUERY in minibuffer."
@@ -228,35 +234,39 @@ compatibilty with Emacs 27."
 
 If SYNC is non-nil, the request will be performed synchronously."
   (message "Getting lyrics from %s" url)
-  (request url
-    :parser 'buffer-string
-    :sync sync
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (let* ((html (with-temp-buffer
-                               (insert data)
-                               (libxml-parse-html-region (point-min) (point-max))))
-                       ;; Apparently, Genius can give different
-                       ;; responses to different people based on
-                       ;; cookies.
-                       (lyrics-divs (or (dom-by-class html (rx bos "lyrics" eos))
-                                        (dom-by-class html (rx bos "Lyrics__Container" (* nonl)))
-                                        (dom-by-class html (rx bos "Lyrics-sc" (* nonl))) )))
-                  (funcall callback
-                           (mapconcat
-                            (lambda (lyrics-div)
-                              (with-temp-buffer
-                                (lyrics-fetcher-genius--dom-print lyrics-div)
-                                (shr-render-region (point-min) (point-max))
-                                (buffer-substring-no-properties
-                                 (point-min)
-                                 (point-max))))
-                            lyrics-divs
-                            "\n")))))
-    :error
-    (cl-function
-     (lambda (&key error-thrown &allow-other-keys)
-       (message "Error!: %S" error-thrown)))))
+  (let ((request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
+    (request url
+      :parser 'buffer-string
+      :sync sync
+      :success
+      (cl-function
+       (lambda (&key data &allow-other-keys)
+         (let* ((html (with-temp-buffer
+                        (insert data)
+                        (libxml-parse-html-region (point-min) (point-max))))
+                ;; Apparently, Genius can give different
+                ;; responses to different people based on
+                ;; cookies.
+                (lyrics-divs (or (dom-by-class html (rx bos "lyrics" eos))
+                                 (dom-by-class html (rx bos "Lyrics__Container" (* nonl)))
+                                 (dom-by-class html (rx bos "Lyrics-sc" (* nonl))) )))
+           (funcall callback
+                    (mapconcat
+                     (lambda (lyrics-div)
+                       (with-temp-buffer
+                         (lyrics-fetcher-genius--dom-print lyrics-div)
+                         (shr-render-region (point-min) (point-max))
+                         (buffer-substring-no-properties
+                          (point-min)
+                          (point-max))))
+                     lyrics-divs
+                     "\n")))))
+      :error (cl-function
+              (lambda (&key error-thrown &allow-other-keys)
+                (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher-genius-download-cover (track callback folder &optional sync edit)
   "Downloads album cover of TRACK.
@@ -297,16 +307,20 @@ The file will be saved to FOLDER and will be named
 \"cover_large.<extension>\".
 
 CALLBACK is passed to `lyrics-fetcher-genius--save-album-url'."
-  (request
-    (format "https://api.genius.com/songs/%s" id)
-    :parser 'json-read
-    :params `(("access_token" . ,lyrics-fetcher-genius-access-token))
-    :success (cl-function
-              (lambda (&key data &allow-other-keys)
-                (lyrics-fetcher-genius--save-album-url data callback folder)))
-    :error (cl-function
-            (lambda (&key error-thrown &allow-other-keys)
-              (message "Error!: %S" error-thrown)))))
+  (let ((request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
+    (request
+      (format "https://api.genius.com/songs/%s" id)
+      :parser 'json-read
+      :params `(("access_token" . ,lyrics-fetcher-genius-access-token))
+      :success (cl-function
+                (lambda (&key data &allow-other-keys)
+                  (lyrics-fetcher-genius--save-album-url data callback folder)))
+      :error (cl-function
+              (lambda (&key error-thrown &allow-other-keys)
+                (message "Error!: %S" error-thrown))))))
 
 (defun lyrics-fetcher-genius--save-album-url (data callback folder)
   "Save album cover of DATA to FOLDER.
@@ -321,7 +335,11 @@ CALLBACK will be called with the path to the resulting file."
               (assoc 'cover_art_url
                      (assoc 'album
                             (assoc 'song
-                                   (assoc 'response data)))))))
+                                   (assoc 'response data))))))
+        (request-curl-options
+         (append request-curl-options
+                 (when lyrics-fetcher-proxy
+                   `("--proxy" ,lyrics-fetcher-proxy)))))
     (if (not url)
         (message "Album cover not found")
       (message "Downloading the cover image...")
