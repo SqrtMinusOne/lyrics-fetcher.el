@@ -593,5 +593,17 @@ Requires imagemagick installed."
      "-gravity" "Center" "-extent" (car size)
      (f-join (f-dirname filename) (concat (cdr size) (f-ext filename))))))
 
+(defun lyrics-fetcher-generate-covers (file)
+  "Generate cover_small and cover_medium from FILE.
+
+Copy FILE to cover_large."
+  (interactive
+   (list (read-file-name "Cover file: ")))
+  (let* ((ext (f-ext file))
+         (cover (format "cover_large.%s" ext)))
+    (unless (equal (f-filename file) cover)
+      (f-copy file (f-join (f-dirname file) cover)))
+    (lyrics-fetcher--generate-cover-sizes cover)))
+
 (provide 'lyrics-fetcher)
 ;;; lyrics-fetcher.el ends here
